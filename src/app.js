@@ -1,0 +1,736 @@
+/**
+ * Toiles — vue Aujourd'hui.
+ *
+ * Ce fichier ne calcule rien : il lit le formulaire, appelle les modules
+ * (Toiles.numerologie, Toiles.astres) et écrit le résultat dans la page.
+ * Organisation :
+ *   1. outils         petites fonctions utilitaires
+ *   2. filtre         afficher numérologie / ciel / les deux
+ *   3. infobulles     « Comment ça marche »
+ *   4. rendu          dessin des cartes (+ profils, méthodologie, fiches glossaire)
+ *   5. démarrage
+ */
+(function () {
+  'use strict';
+  const { numerologie: N, astres: A, transits: TR, textes: TXT, glossaire: G, methodologie: M, fiches: F, cleGlossaire, cleNombre } = window.Toiles;
+
+  // Stocke les transits calculés pour la date courante (utilisé par contenuTransit lors du clic)
+  let transitsCourants = [];
+
+  // ===================== 1. Outils =====================
+
+  const $ = (id) => document.getElementById(id);
+  const pct = (x) => Math.round(x * 100) + ' %';
+
+  // Noms affichés des 6 domaines (définis une seule fois, dans src/fiches.js).
+  const LIBELLES_DOMAINES = F.LIBELLES_DOMAINES;
+
+  /** "2026-10-28" (valeur d'un <input type="date">) → Date locale à midi.
+   *  Midi plutôt que minuit : la lecture est « par jour », et midi évite qu'un
+   *  décalage de fuseau fasse basculer la date de la veille. */
+  function lireDate(valeur) {
+    const [a, m, j] = valeur.split('-').map(Number);
+    return new Date(a, m - 1, j, 12, 0);
+  }
+
+  /** Date → "2026-10-28", pour remplir un <input type="date">. */
+  /** La date choisie dans le formulaire (les bulles en ont besoin pour refaire un calcul). */
+  const dateCourante = () => lireDate($('date').value);
+
+  function versChamp(date) {
+    const deux = (n) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${deux(date.getMonth() + 1)}-${deux(date.getDate())}`;
+  }
+
+  /** Lecture / écriture du navigateur, sans planter si le stockage est bloqué
+   *  (navigation privée, fichier local selon le navigateur…). */
+  const memoire = {
+    lire(cle, defaut) {
+      try { return localStorage.getItem(cle) ?? defaut; } catch { return defaut; }
+    },
+    ecrire(cle, valeur) {
+      try { localStorage.setItem(cle, valeur); } catch { /* tant pis : rien n'est retenu */ }
+    },
+  };
+
+  // ===================== 2. Filtre =====================
+
+  /** Montre les cartes dont data-module correspond au choix ("tout" = toutes). */
+  function appliquerFiltre(choix) {
+    document.querySelectorAll('.carte[data-module]').forEach((carte) => {
+      carte.hidden = choix !== 'tout' && carte.dataset.module !== choix;
+    });
+  }
+
+  function initFiltre() {
+    const choix = memoire.lire('toiles_vue', 'tout');
+    const radio = document.querySelector(`#filtre input[value="${choix}"]`);
+    if (radio) radio.checked = true;
+    appliquerFiltre(choix);
+
+    $('filtre').addEventListener('change', (e) => {
+      memoire.ecrire('toiles_vue', e.target.value);
+      appliquerFiltre(e.target.value);
+    });
+  }
+
+  // ===================== 3. Infobulles =====================
+  //
+  // Une seule bulle pour toute la page, placée sous l'élément cliqué.
+  // Deux sortes de déclencheurs :
+  //   - bouton « ? » d'une carte (classe .info, data-info="cle")  → src/textes.js
+  //   - terme cliquable (classe .terme, data-glossaire="cle")     → src/glossaire.js
+  // On l'ouvre au clic (et non au survol) pour qu'elle marche aussi au doigt
+  // sur téléphone. Elle se ferme : en recliquant, en cliquant ailleurs, ou avec Échap.
+  //
+  // Le pied de chaque bulle propose « Fiche complète → » (data-fiche="cle") :
+  // c'est le lien transversal vers le panneau Fiches glossaire (section plus bas).
+
+  let boutonOuvert = null;
+
+  /** Boutons « Fiche … → » à mettre au pied d'une bulle. cles : clés du glossaire. */
+  function liensFiches(cles) {
+    return cles.filter((c) => G[c]).map((c) =>
+      `<button type="button" class="lien lien-methode" data-fiche="${c}">Fiche ${G[c].titre} →</button>`).join(' ');
+  }
+
+  /** Contenu d'un bouton « ? » : comment fonctionne un module. */
+  function contenuModule(cle) {
+    const t = TXT.infobulles[cle];
+    if (!t) return null;
+    const cible = t.sectionMethodologie || cle;
+    return `
+      <strong>${t.titre} — comment ça marche</strong>
+      <p>${t.principe}</p>
+      <h4>Sur quoi c'est basé</h4><p>${t.base}</p>
+      <h4>À garder en tête</h4><p>${t.limites}</p>
+      <div class="bulle-pied">
+        <button type="button" class="lien lien-methode" data-methode="${cible}">En savoir plus →</button>
+      </div>`;
+  }
+
+  /**
+   * Contenu d'un terme : son entrée dans le glossaire.
+   * astre (optionnel) : la planète concernée, quand le terme dépend d'elle
+   * (ex. le ℞ de la ligne Mercure affiche aussi « Pour Mercure »).
+   */
+  function contenuTerme(cle, astre) {
+    const t = G[cle];
+    if (!t) return null;
+    const propre = astre && t.parAstre && t.parAstre[astre];
+    return `
+      <strong>${t.titre}${propre ? ' — ' + A.ASTRES[astre].nom : ''}</strong>
+      <p>${t.court}</p>
+      ${t.detail ? `<p>${t.detail}</p>` : ''}
+      ${t.effet ? `<h4>Ce que ça fait</h4><p>${t.effet}</p>` : ''}
+      ${propre ? `<h4>Pour ${A.ASTRES[astre].nom}</h4><p>${propre}</p>` : ''}
+      ${t.conseil ? `<h4>Conseil</h4><p>${t.conseil}</p>` : ''}
+      ${t.motsCles ? `<h4>Mots-clés</h4><p>${t.motsCles.join(' · ')}</p>` : ''}
+      <div class="bulle-pied">
+        <button type="button" class="lien lien-methode" data-fiche="${cle}">Fiche complète →</button>
+      </div>`;
+  }
+
+  /**
+   * Contenu « planète en signe » (ex. Mars en Lion) : texte rédigé, revers,
+   * mots-clés et dignité. Les textes sont dans src/positions.js.
+   */
+  function contenuPosition(astre, signe) {
+    const l = window.Toiles.positions.lire(astre, Number(signe));
+    const S = A.SIGNES[Number(signe)];
+    const etat = l.dignite.etats[0]; // sert à la couleur du badge (voir toiles.css)
+    return `
+      <strong>${A.ASTRES[astre].glyphe} ${A.ASTRES[astre].nom} en ${S.glyphe} ${S.nom}</strong>
+      <span class="dignite dignite-${etat}">${l.dignite.libelle}</span>
+      <p>${l.texte}</p>
+      ${l.revers ? `<h4>Revers</h4><p>${l.revers}</p>` : ''}
+      <h4>Mots-clés</h4><p>${l.motsCles.join(' · ')}</p>
+      <h4>Dignité</h4><p>${l.dignite.explication}</p>
+      ${l.assemble ? '<p><em>Texte assemblé automatiquement (pas encore rédigé).</em></p>' : ''}
+      ${blocCalcul(A.expliquerPosition(astre, dateCourante()))}
+      <div class="bulle-pied">
+        ${liensFiches([astre, cleGlossaire(S.nom)])}
+        <button type="button" class="lien lien-methode" data-methode="dignites">En savoir plus sur les dignités →</button>
+      </div>`;
+  }
+
+  /**
+   * Contenu d'un aspect (clic sur son écart) : le calcul pas à pas,
+   * puis la définition de l'orbe.
+   * index : position de l'aspect dans la liste affichée.
+   */
+  function contenuAspect(index) {
+    const date = dateCourante();
+    const pos = A.positions(date);
+    const x = A.aspects(pos)[Number(index)];
+    if (!x) return null;
+    return `
+      <strong>${A.ASTRES[x.a].nom} ${x.nom.toLowerCase()} ${A.ASTRES[x.b].nom}</strong>
+      <p>${G[cleGlossaire(x.nom)].court}</p>
+      ${blocCalcul(A.expliquerAspect(x, pos), true)}
+      <h4>${G.orbe.titre}</h4><p>${G.orbe.court}</p>
+      <div class="bulle-pied">
+        ${liensFiches([cleGlossaire(x.nom)])}
+        <button type="button" class="lien lien-methode" data-methode="ciel">En savoir plus sur le calcul du ciel →</button>
+      </div>`;
+  }
+
+  /**
+   * Contenu d'un transit personnel (clic sur son écart) :
+   * calcul détaillé pas à pas, rythme d'influence et définition de l'orbe.
+   */
+  function contenuTransit(index) {
+    const t = transitsCourants[Number(index)];
+    if (!t) return null;
+    const c = t.posTransitant, n = t.posNatal;
+    return `
+      <strong>${A.ASTRES[c.cle].nom} céleste ${t.nom.toLowerCase()} ${A.ASTRES[n.cle].nom} natal</strong>
+      <span class="badge-transit ${t.categorie.type}">${t.categorie.libelle}</span>
+      <p>${G[cleGlossaire(t.nom)] ? G[cleGlossaire(t.nom)].court : ''}</p>
+      ${blocCalcul(TR.expliquer(t), true)}
+      <h4>Rythme &amp; portée</h4><p>${t.categorie.duree}</p>
+      <h4>${G.orbe.titre}</h4><p>${G.orbe.court}</p>
+      <div class="bulle-pied">
+        ${liensFiches([cleGlossaire(t.nom)])}
+        <button type="button" class="lien lien-methode" data-methode="transits">En savoir plus sur les transits →</button>
+      </div>`;
+  }
+
+  /** Le « Voir le calcul » commun aux cartes et aux bulles. ouvert : déplié d'office. */
+  function blocCalcul(etapes, ouvert = false) {
+    return `
+      <details class="calcul"${ouvert ? ' open' : ''}>
+        <summary>Voir le calcul</summary>
+        <ol>${etapes.map((e) => `<li>${e}</li>`).join('')}</ol>
+      </details>`;
+  }
+
+  function ouvrirBulle(bouton) {
+    const d = bouton.dataset;
+    const html = d.info ? contenuModule(d.info)
+      : d.position ? contenuPosition(d.position, d.signe)
+      : d.aspect !== undefined ? contenuAspect(d.aspect)
+      : d.transit !== undefined ? contenuTransit(d.transit)
+      : contenuTerme(d.glossaire, d.astre);
+    if (!html) return; // clé absente des textes : on n'ouvre rien plutôt qu'une bulle vide
+    const bulle = $('bulle');
+    bulle.innerHTML = html;
+    bulle.hidden = false;
+
+    // Position : sous le bouton, sans dépasser du bord droit de l'écran.
+    const r = bouton.getBoundingClientRect();
+    const largeur = Math.min(340, window.innerWidth - 32);
+    bulle.style.width = largeur + 'px';
+    bulle.style.top = window.scrollY + r.bottom + 8 + 'px';
+    bulle.style.left = Math.max(16, Math.min(r.left, window.innerWidth - largeur - 16)) + 'px';
+
+    bouton.setAttribute('aria-expanded', 'true');
+    boutonOuvert = bouton;
+  }
+
+  function fermerBulle() {
+    $('bulle').hidden = true;
+    if (boutonOuvert) boutonOuvert.setAttribute('aria-expanded', 'false');
+    boutonOuvert = null;
+  }
+
+  function initInfobulles() {
+    document.addEventListener('click', (e) => {
+      // Lien vers le volet Méthodologie dans une bulle
+      const lien = e.target.closest('[data-methode]');
+      if (lien) {
+        fermerBulle();
+        ouvrirMethodologie(lien.dataset.methode);
+        return;
+      }
+
+      // Lien vers une fiche complète (depuis une bulle, ou d'une fiche à l'autre)
+      const lienFiche = e.target.closest('[data-fiche]');
+      if (lienFiche) {
+        fermerBulle();
+        ouvrirFiches(lienFiche.dataset.fiche);
+        return;
+      }
+
+      const bouton = e.target.closest('.info, .terme');
+      if (bouton) {
+        const memeBouton = bouton === boutonOuvert;
+        fermerBulle();
+        if (!memeBouton) ouvrirBulle(bouton);
+      } else if (!e.target.closest('#bulle')) {
+        fermerBulle();
+      }
+    });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') fermerBulle(); });
+    window.addEventListener('resize', fermerBulle);
+  }
+
+  // ===================== 4. Rendu =====================
+
+  /**
+   * Un terme cliquable qui ouvre sa définition du glossaire.
+   * C'est un <button> (et non un <span>) pour être atteignable au clavier.
+   */
+  function terme(cle, contenu, titre, astre) {
+    // astre : précise la planète concernée (ex. ℞ de Mercure) → data-astre, lu par contenuTerme().
+    const contexte = astre ? ` data-astre="${astre}"` : '';
+    return `<button type="button" class="terme" data-glossaire="${cle}"${contexte} aria-label="${titre || contenu} : définition">${contenu}</button>`;
+  }
+
+  /**
+   * Un bloc « nombre » : pastille, mot-clé, texte du domaine,
+   * et le calcul détaillé dans un <details> (dépliable, natif, sans JS).
+   * La pastille est un terme cliquable : elle ouvre la définition du nombre
+   * (entrée « nombreN » du glossaire), d'où l'on rejoint sa fiche complète.
+   */
+  function blocNombre(titre, explication, domaine) {
+    const n = explication.valeur;
+    const sens = N.interpreter(n, domaine);
+    return `
+      <div class="nombre">
+        <button type="button" class="terme chiffre" data-glossaire="${cleNombre(n)}" aria-label="Nombre ${n} : définition">${n}</button>
+        <div>
+          <strong>${titre} · ${sens.mot}</strong>
+          <p>${sens.texte}</p>
+          ${blocCalcul(explication.etapes)}
+        </div>
+      </div>`;
+  }
+
+  function rendreNumerologie(date, naissance, domaine) {
+    const semaine = N.semaineISO(date);
+    const ligne = (titre, type, perso) => blocNombre(titre, N.expliquer(type, date, naissance, perso), domaine);
+
+    let html = '<h3>Énergie collective</h3>' +
+      ligne('Année', 'annee', false) +
+      ligne('Mois', 'mois', false) +
+      ligne(`Semaine ${semaine}`, 'semaine', false) +
+      ligne('Jour', 'jour', false);
+
+    if (naissance) {
+      html += `<h3>Énergie personnelle <small>${terme('cheminDeVie', 'chemin de vie ' + N.cheminDeVie(naissance))}</small></h3>` +
+        ligne('Année', 'annee', true) +
+        ligne('Mois', 'mois', true) +
+        ligne('Semaine', 'semaine', true) +
+        ligne('Jour', 'jour', true);
+    }
+    $('numero').innerHTML = html;
+  }
+
+  function rendreCiel(date) {
+    const dyn = A.dynamique(date);
+
+    // Lune
+    $('lune').innerHTML = `
+      <span class="disque" style="--ill:${dyn.lune.illumination};--sens:${dyn.lune.croissante ? 1 : -1}"></span>
+      <div><strong>${terme('phase', dyn.lune.nom)}</strong><br>${pct(dyn.lune.illumination)} éclairée</div>`;
+
+    // Positions
+    // Chaque symbole et chaque nom ouvre sa définition (glossaire).
+    $('astres').innerHTML = dyn.positions.map((x) => `
+      <tr>
+        <td class="g">${terme(x.cle, x.glyphe, x.nom)}</td>
+        <td><button type="button" class="terme" data-position="${x.cle}" data-signe="${x.signe.index}"
+              aria-label="${x.nom} en ${x.signe.nom} : lecture">${x.nom}</button></td>
+        <td>${terme(cleGlossaire(x.signe.nom), `${x.signe.glyphe} ${x.signe.nom}`)}</td>
+        <td class="num">${terme('degre', x.signe.degre.toFixed(1) + '°', 'Degré')}</td>
+        <td>${x.retrograde ? terme('retrograde', '<span class="retro">℞</span>', `${x.nom} rétrograde`, x.cle) : ''}</td>
+      </tr>`).join('');
+
+    // Dynamique
+    const barres = (o) => Object.entries(o).map(([k, v]) =>
+      `<div class="barre"><span>${terme(k, k)}</span><i style="--v:${v}"></i><b>${pct(v)}</b></div>`).join('');
+    const c = dyn.climat;
+    const climat = c.indice > 0.2 ? 'plutôt fluide' : c.indice < -0.2 ? 'plutôt tendu' : 'contrasté';
+    $('dynamique').innerHTML = `
+      <p>Élément dominant : <strong>${terme(dyn.elementDominant, dyn.elementDominant)}</strong> · mode <strong>${terme(dyn.modeDominant, dyn.modeDominant)}</strong> · climat <strong>${climat}</strong></p>
+      <h3>Éléments</h3>${barres(dyn.elements)}
+      <h3>Modes</h3>${barres(dyn.modes)}
+      ${dyn.retrogrades.length ? `<p>${terme('retrograde', 'Rétrogrades')} : ${dyn.retrogrades.map((k) => terme('retrograde', A.ASTRES[k].nom, `${A.ASTRES[k].nom} rétrograde`, k)).join(', ')}</p>` : ''}`;
+
+    // Aspects (les 10 plus forts). Le symbole de l'aspect et l'écart ouvrent leur définition.
+    // i : rang de l'aspect, relu par contenuAspect() (la liste est triée de la même façon).
+    $('aspects').innerHTML = dyn.aspects.slice(0, 10).map((x, i) => `
+      <li class="${x.nature}">
+        <span>${terme(x.a, A.ASTRES[x.a].glyphe, A.ASTRES[x.a].nom)} ${terme(cleGlossaire(x.nom), x.glyphe, x.nom)} ${terme(x.b, A.ASTRES[x.b].glyphe, A.ASTRES[x.b].nom)}</span>
+        <span>${A.ASTRES[x.a].nom} ${x.nom.toLowerCase()} ${A.ASTRES[x.b].nom}</span>
+        <em><button type="button" class="terme" data-aspect="${i}"
+              aria-label="Calcul de l'aspect">${x.ecart.toFixed(1).replace('.', ',')}°</button></em></li>`).join('') || '<li>Aucun aspect majeur.</li>';
+  }
+
+  function rendreTransits(date, naissance) {
+    if (!naissance) {
+      transitsCourants = [];
+      $('transits').innerHTML = '<p class="aide-profil">Sélectionnez un profil ou saisissez une date de naissance pour afficher vos transits personnels.</p>';
+      return;
+    }
+
+    const res = TR.calculer(date, naissance);
+    transitsCourants = res.transits;
+    const theme = res.themeNatal;
+
+    let html = `<div class="natal-resume"><small>Thème natal calculé au ${dateFr(versChamp(theme.date))} (midi TU)</small></div>`;
+    if (theme.luneChangeDeSigne) {
+      html += `<div class="avertissement-lune"><span aria-hidden="true">⚠️</span> <div>${theme.avertissementLune}</div></div>`;
+    }
+
+    if (res.transits.length === 0) {
+      html += '<p class="aide-profil">Aucun transit majeur actif avec les orbes resserrés (1° à 3°).</p>';
+    } else {
+      html += '<ul class="aspects liste-transits">' + res.transits.map((t, i) => {
+        const c = t.posTransitant, n = t.posNatal;
+        return `
+          <li class="${t.nature}">
+            <span>${terme(c.cle, A.ASTRES[c.cle].glyphe, A.ASTRES[c.cle].nom)} ${terme(cleGlossaire(t.nom), t.glyphe, t.nom)} ${terme(n.cle, A.ASTRES[n.cle].glyphe, A.ASTRES[n.cle].nom)}</span>
+            <span>
+              <strong>${A.ASTRES[c.cle].nom}</strong> <small>(ciel)</small>
+              ${t.nom.toLowerCase()}
+              <strong>${A.ASTRES[n.cle].nom}</strong> <small>(natal)</small>
+              <span class="badge-transit ${t.categorie.type}">${t.categorie.libelle}</span>
+            </span>
+            <em><button type="button" class="terme" data-transit="${i}" aria-label="Calcul du transit">${t.ecart.toFixed(1).replace('.', ',')}°</button></em>
+          </li>`;
+      }).join('') + '</ul>';
+    }
+
+    $('transits').innerHTML = html;
+  }
+
+  // ===================== Profils =====================
+  //
+  // Les données sont gérées par src/profils.js ; ici, seulement l'affichage :
+  //   - le sélecteur « Profil » du formulaire ;
+  //   - le panneau « Gérer » (ajouter, modifier, supprimer, exporter).
+
+  const P = window.Toiles.profils;
+  let enEdition = null;        // id du profil en cours de modification (null = ajout)
+  let suppressionDemandee = null; // id dont la suppression attend confirmation
+
+  /** Date de naissance à utiliser : celle du profil choisi, ou celle tapée à la main. */
+  function naissanceCourante() {
+    const choix = $('profil').value;
+    if (choix === 'autre') return $('naissance').value ? lireDate($('naissance').value) : null;
+    const p = choix && P.obtenir(choix);
+    return p ? lireDate(p.naissance) : null;
+  }
+
+  /** Remplit le sélecteur et montre le champ date seulement pour « Autre date… ». */
+  function remplirSelecteur() {
+    const actif = P.actif();
+    $('profil').innerHTML =
+      '<option value="">Aucun</option>' +
+      P.lister().map((p) => `<option value="${p.id}">${echapper(p.nom)}</option>`).join('') +
+      '<option value="autre">Autre date…</option>';
+    $('profil').value = actif;
+    $('champ-naissance').hidden = actif !== 'autre';
+  }
+
+  /** Le nom est tapé par l'utilisateur : on neutralise < > & avant de l'insérer dans la page. */
+  function echapper(texte) {
+    return texte.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  }
+
+  /** "1990-05-15" → "15/05/1990" pour l'affichage. */
+  const dateFr = (v) => v.split('-').reverse().join('/');
+
+  function dessinerListe() {
+    const liste = P.lister();
+    $('liste-profils').innerHTML = liste.length
+      ? liste.map((p) => `
+        <li>
+          <span><strong>${echapper(p.nom)}</strong> <small>${dateFr(p.naissance)} · chemin de vie ${N.cheminDeVie(lireDate(p.naissance))}</small></span>
+          <span class="actions">
+            <button type="button" class="lien" data-modifier="${p.id}">Modifier</button>
+            ${suppressionDemandee === p.id
+              ? `<button type="button" class="lien danger" data-supprimer="${p.id}">Confirmer la suppression</button>
+                 <button type="button" class="lien" data-garder>Garder</button>`
+              : `<button type="button" class="lien" data-demander="${p.id}">Supprimer</button>`}
+          </span>
+        </li>`).join('')
+      : '<li class="vide">Aucun profil pour l’instant.</li>';
+  }
+
+  /** Remet le formulaire du panneau en mode « ajout ». */
+  function viderFormulaire() {
+    enEdition = null;
+    $('form-profil').reset();
+    $('titre-form').textContent = 'Nouveau profil';
+    $('profil-valider').textContent = 'Ajouter';
+    $('profil-annuler').hidden = true;
+    $('profil-erreur').hidden = true;
+  }
+
+  /** Télécharge un fichier sans serveur : un lien temporaire vers un Blob. */
+  function telecharger(nomFichier, contenu) {
+    const url = URL.createObjectURL(new Blob([contenu], { type: 'application/json' }));
+    const lien = Object.assign(document.createElement('a'), { href: url, download: nomFichier });
+    document.body.append(lien);
+    lien.click();
+    lien.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function initProfils() {
+    remplirSelecteur();
+
+    $('profil').addEventListener('change', () => {
+      P.choisirActif($('profil').value);
+      $('champ-naissance').hidden = $('profil').value !== 'autre';
+      rendre();
+    });
+
+    $('gerer').addEventListener('click', () => {
+      suppressionDemandee = null;
+      viderFormulaire();
+      dessinerListe();
+      $('panneau-profils').showModal();
+    });
+    $('fermer-profils').addEventListener('click', () => $('panneau-profils').close());
+
+    // À la fermeture du panneau : la page reflète les changements.
+    $('panneau-profils').addEventListener('close', () => { remplirSelecteur(); rendre(); });
+
+    // Boutons de la liste (un seul écouteur pour toute la liste).
+    $('liste-profils').addEventListener('click', (e) => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      if (b.dataset.modifier) {
+        const p = P.obtenir(b.dataset.modifier);
+        enEdition = p.id;
+        $('profil-nom').value = p.nom;
+        $('profil-naissance').value = p.naissance;
+        $('titre-form').textContent = `Modifier ${p.nom}`;
+        $('profil-valider').textContent = 'Enregistrer';
+        $('profil-annuler').hidden = false;
+        $('profil-nom').focus();
+      } else if (b.dataset.demander) {
+        suppressionDemandee = b.dataset.demander;
+      } else if (b.dataset.supprimer) {
+        P.supprimer(b.dataset.supprimer);
+        if (enEdition === b.dataset.supprimer) viderFormulaire();
+        suppressionDemandee = null;
+      } else if ('garder' in b.dataset) {
+        suppressionDemandee = null;
+      }
+      dessinerListe();
+    });
+
+    $('form-profil').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const champs = { nom: $('profil-nom').value, naissance: $('profil-naissance').value };
+      try {
+        if (enEdition) {
+          P.modifier(enEdition, champs);
+        } else {
+          // Le premier profil créé devient le profil actif : c'est sans doute « moi ».
+          const p = P.ajouter(champs);
+          if (P.lister().length === 1) P.choisirActif(p.id);
+        }
+        viderFormulaire();
+        dessinerListe();
+      } catch (err) {
+        $('profil-erreur').textContent = err.message;
+        $('profil-erreur').hidden = false;
+      }
+    });
+    $('profil-annuler').addEventListener('click', viderFormulaire);
+
+    $('exporter').addEventListener('click', () =>
+      telecharger(`toiles-profils-${versChamp(new Date())}.json`, P.exporter()));
+  }
+
+  // ===================== Méthodologie =====================
+  //
+  // Le volet Méthodologie & Pédagogie (src/methodologie.js).
+  // Modal <dialog> natif, structuré en deux onglets : Numérologie et Ciel.
+  // Chaque fiche détaille le pourquoi, la formule, les limites et les conventions.
+
+  let domaineMethodeActif = 'numerologie';
+
+  function dessinerMethodologie(domaine, sectionIdCible = null) {
+    domaineMethodeActif = domaine;
+
+    // Mise à jour des boutons d'onglets
+    document.querySelectorAll('#onglets-methodologie .onglet').forEach((btn) => {
+      const actif = btn.dataset.onglet === domaine;
+      btn.classList.toggle('actif', actif);
+      btn.setAttribute('aria-selected', actif ? 'true' : 'false');
+    });
+
+    const infoDomaine = M.donnees[domaine];
+    $('intro-methodologie').textContent = infoDomaine ? infoDomaine.description : '';
+
+    const sections = M.lister(domaine);
+    $('corps-methodologie').innerHTML = sections.map((sec) => `
+      <article class="fiche-methode" id="methode-${sec.id}">
+        <h3>${sec.titre}</h3>
+        <p class="resume">${sec.resume}</p>
+        ${sec.formule ? `
+          <div class="cadre-formule">
+            <strong>Formule &amp; méthode</strong>
+            <pre>${sec.formule}</pre>
+          </div>` : ''}
+        ${sec.paragraphes.map((p) => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('')}
+      </article>
+    `).join('');
+
+    // Défilement fluide vers la section ciblée
+    if (sectionIdCible) {
+      setTimeout(() => {
+        const el = $(`methode-${sectionIdCible}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          el.classList.add('ciblee');
+          setTimeout(() => el.classList.remove('ciblee'), 2500);
+        }
+      }, 60);
+    }
+  }
+
+  function ouvrirMethodologie(cleCible = 'numerologie') {
+    const cible = M.trouver(cleCible);
+    let domaine = 'numerologie';
+    let sectionId = null;
+
+    if (cible) {
+      if (cible.type === 'domaine') {
+        domaine = cible.id;
+      } else if (cible.type === 'section') {
+        domaine = cible.domaine;
+        sectionId = cible.id;
+      }
+    } else if (cleCible === 'ciel') {
+      domaine = 'ciel';
+    }
+
+    dessinerMethodologie(domaine, sectionId);
+    const panneau = $('panneau-methodologie');
+    if (!panneau.open) panneau.showModal();
+  }
+
+  function initMethodologie() {
+    $('ouvrir-methodologie').addEventListener('click', () => ouvrirMethodologie('numerologie'));
+    $('fermer-methodologie').addEventListener('click', () => $('panneau-methodologie').close());
+
+    // Clic sur l'arrière-plan sombre (<dialog>::backdrop) pour fermer
+    $('panneau-methodologie').addEventListener('click', (e) => {
+      if (e.target === $('panneau-methodologie')) $('panneau-methodologie').close();
+    });
+
+    // Clic sur un onglet de navigation
+    $('onglets-methodologie').addEventListener('click', (e) => {
+      const onglet = e.target.closest('[data-onglet]');
+      if (!onglet) return;
+      dessinerMethodologie(onglet.dataset.onglet);
+    });
+  }
+
+  // ===================== Fiches glossaire =====================
+  //
+  // Panneau <dialog> listant toutes les fiches (src/fiches.js les assemble).
+  // - Onglets : « Tout » + une catégorie par onglet (nombres, signes, planètes…).
+  // - Recherche : filtre sur le titre, la définition, la lumière/ombre et les mots-clés.
+  // - Chaque fiche est un <details> natif : résumé visible, contenu complet au dépli.
+  // - ouvrirFiches(cle) : ouvre le panneau directement sur une fiche, dépliée et
+  //   mise en évidence. C'est ce qu'appellent les liens « Fiche complète → ».
+
+  let categorieFiches = 'tout';
+
+  /** HTML d'un bloc de fiche (texte, liens vers d'autres fiches, ou 6 domaines). */
+  function blocFiche(b) {
+    let html = `<h4>${b.titre}</h4>`;
+    if (b.texte) html += `<p>${b.texte}</p>`;
+    if (b.domaines) {
+      html += '<dl class="domaines-fiche">' + b.domaines.map((d) =>
+        `<dt>${d.libelle}</dt><dd>${d.texte}</dd>`).join('') + '</dl>';
+    }
+    if (b.liens) {
+      html += '<p class="liens-fiche">' + b.liens.map((l) =>
+        `<button type="button" class="lien" data-fiche="${l.cle}">${l.libelle}</button>`).join(' ') + '</p>';
+    }
+    return html;
+  }
+
+  /** HTML d'une fiche complète, repliée par défaut (ouverte si ouverte = true). */
+  function htmlFiche(cle, ouverte) {
+    const f = F.construire(cle);
+    return `
+      <details class="fiche" id="fiche-${cle}"${ouverte ? ' open' : ''}>
+        <summary><strong>${f.titre}</strong><span>${f.court}</span></summary>
+        <div class="fiche-corps">${f.blocs.map(blocFiche).join('')}</div>
+      </details>`;
+  }
+
+  /** Redessine les onglets et la liste selon la catégorie et la recherche en cours. */
+  function dessinerFiches(cleOuverte = null) {
+    $('onglets-fiches').innerHTML = [{ id: 'tout', libelle: 'Tout' }, ...F.CATEGORIES].map((c) => `
+      <button type="button" class="onglet${c.id === categorieFiches ? ' actif' : ''}" data-categorie="${c.id}"
+        role="tab" aria-selected="${c.id === categorieFiches}">${c.libelle}</button>`).join('');
+
+    const recherche = cleGlossaire($('recherche-fiches').value.trim());
+    const cles = F.lister(categorieFiches).filter((c) => !recherche || F.texteRecherche(c).includes(recherche));
+    $('corps-fiches').innerHTML = cles.length
+      ? cles.map((c) => htmlFiche(c, c === cleOuverte)).join('')
+      : '<p class="aide-profil">Aucune fiche ne correspond à cette recherche.</p>';
+  }
+
+  /** Ouvre le panneau ; avec une clé, se place sur cette fiche (dépliée, surlignée). */
+  function ouvrirFiches(cle = null) {
+    if (cle && G[cle]) {
+      categorieFiches = G[cle].categorie; // on affiche l'onglet de la fiche visée
+      $('recherche-fiches').value = '';   // et on retire un éventuel filtre qui la cacherait
+    }
+    dessinerFiches(cle);
+    const panneau = $('panneau-fiches');
+    if (!panneau.open) panneau.showModal();
+    if (cle) {
+      const el = $(`fiche-${cle}`);
+      if (el) {
+        el.scrollIntoView({ block: 'start' });
+        el.classList.add('ciblee');
+        setTimeout(() => el.classList.remove('ciblee'), 2500);
+      }
+    }
+  }
+
+  function initFiches() {
+    $('ouvrir-fiches').addEventListener('click', () => ouvrirFiches());
+    $('fermer-fiches').addEventListener('click', () => $('panneau-fiches').close());
+    // Clic sur l'arrière-plan sombre pour fermer
+    $('panneau-fiches').addEventListener('click', (e) => {
+      if (e.target === $('panneau-fiches')) $('panneau-fiches').close();
+    });
+    $('onglets-fiches').addEventListener('click', (e) => {
+      const onglet = e.target.closest('[data-categorie]');
+      if (!onglet) return;
+      categorieFiches = onglet.dataset.categorie;
+      dessinerFiches();
+    });
+    $('recherche-fiches').addEventListener('input', () => dessinerFiches());
+  }
+
+  /** Relit le formulaire et redessine tout. */
+  function rendre() {
+    if (!$('date').value) return;
+    const date = lireDate($('date').value);
+    const naissance = naissanceCourante();
+    rendreNumerologie(date, naissance, $('domaine').value);
+    rendreCiel(date);
+    rendreTransits(date, naissance);
+  }
+
+  // ===================== 5. Démarrage =====================
+
+  $('domaine').innerHTML = N.DOMAINES
+    .map((d) => `<option value="${d}">${LIBELLES_DOMAINES[d]}</option>`).join('');
+  $('date').value = versChamp(new Date());
+
+  initFiltre();
+  initInfobulles();
+  initProfils();
+  initMethodologie();
+  initFiches();
+  // Le filtre et le sélecteur de profil ont leur propre écouteur : on ne redessine pas pour eux.
+  $('form').addEventListener('input', (e) => { if (e.target.name !== 'vue' && e.target.id !== 'profil') rendre(); });
+  rendre();
+})();

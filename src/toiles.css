@@ -1,0 +1,219 @@
+:root {
+  --fond: #f6f3ee; --carte: #fffdf9; --texte: #26221d; --doux: #7a7064; --ligne: #e4ddd2;
+  --accent: #6b4fa3; --harmonie: #3f8a6b; --tension: #b5523b; --fusion: #b08a2e;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --fond: #14121a; --carte: #1d1a25; --texte: #ece6f5; --doux: #9d94ad; --ligne: #2e2a3a; --accent: #b39ce8; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fond); color: var(--texte); line-height: 1.45; }
+.entete { padding: 2rem 1rem 1rem; text-align: center; }
+.entete h1 { margin: 0; font-weight: 300; letter-spacing: .3em; text-transform: uppercase; color: var(--accent); }
+.entete p { margin: .3rem 0 0; color: var(--doux); }
+
+.controles { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; padding: 0 1rem 1.5rem; }
+.controles label { display: flex; flex-direction: column; font-size: .8rem; color: var(--doux); gap: .25rem; }
+.controles input, .controles select {
+  font: inherit; font-size: 1rem; padding: .45rem .6rem; border: 1px solid var(--ligne);
+  border-radius: 8px; background: var(--carte); color: var(--texte);
+}
+
+.grille { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 1rem; padding: 0 1rem 2rem; max-width: 1200px; margin: 0 auto; }
+.carte { background: var(--carte); border: 1px solid var(--ligne); border-radius: 14px; padding: 1.2rem; }
+.carte h2 { margin: 0 0 1rem; font-size: 1.05rem; font-weight: 600; }
+.carte h3 { margin: 1rem 0 .5rem; font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; color: var(--doux); }
+.carte h3 small { text-transform: none; letter-spacing: 0; color: var(--accent); }
+
+.nombre { display: flex; gap: .8rem; align-items: flex-start; padding: .5rem 0; border-bottom: 1px solid var(--ligne); }
+.nombre:last-child { border: 0; }
+.chiffre { flex: 0 0 2.4rem; height: 2.4rem; display: grid; place-items: center; border-radius: 50%; background: var(--accent); color: var(--carte); font-weight: 700; }
+.nombre p { margin: .1rem 0 0; color: var(--doux); font-size: .9rem; }
+
+.lune { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+.disque { width: 48px; height: 48px; border-radius: 50%; background: #2a2533; position: relative; overflow: hidden; box-shadow: inset 0 0 0 1px var(--ligne); }
+.disque::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: #f1e9c9;
+  clip-path: inset(0 calc((1 - var(--ill)) * 100%) 0 0); transform: scaleX(var(--sens)); }
+
+.astres { width: 100%; border-collapse: collapse; font-size: .92rem; }
+.astres td { padding: .35rem .3rem; border-bottom: 1px solid var(--ligne); }
+.astres .g { color: var(--accent); font-size: 1.1rem; width: 1.5rem; }
+.astres .num { text-align: right; font-variant-numeric: tabular-nums; }
+.retro { color: var(--tension); font-weight: 700; }
+
+.barre { display: grid; grid-template-columns: 5rem 1fr 3rem; align-items: center; gap: .5rem; font-size: .85rem; margin: .25rem 0; }
+.barre i { height: 8px; border-radius: 4px; background: linear-gradient(90deg, var(--accent) calc(var(--v) * 100%), var(--ligne) 0); }
+.barre b { text-align: right; font-weight: 500; font-variant-numeric: tabular-nums; }
+
+.aspects { list-style: none; margin: 0; padding: 0; }
+.aspects li { display: grid; grid-template-columns: 4.5rem 1fr auto; gap: .5rem; padding: .4rem 0; border-bottom: 1px solid var(--ligne); font-size: .9rem; border-left: 3px solid transparent; padding-left: .5rem; }
+.aspects li.harmonie { border-left-color: var(--harmonie); }
+.aspects li.tension { border-left-color: var(--tension); }
+.aspects li.fusion { border-left-color: var(--fusion); }
+.aspects em { color: var(--doux); font-style: normal; font-variant-numeric: tabular-nums; }
+
+/* ---------- Transits personnels ---------- */
+.natal-resume { margin-bottom: .6rem; color: var(--doux); font-size: .85rem; }
+.avertissement-lune {
+  display: flex; gap: .5rem; align-items: flex-start;
+  background: rgba(181, 82, 59, .08); border-left: 3px solid var(--tension);
+  border-radius: 0 8px 8px 0; padding: .6rem .8rem; margin: .5rem 0 .8rem;
+  font-size: .83rem; color: var(--texte);
+}
+.aide-profil { color: var(--doux); font-size: .9rem; font-style: italic; margin: .5rem 0; }
+.badge-transit {
+  display: inline-block; font-size: .72rem; padding: .1rem .45rem; border-radius: 999px;
+  margin-left: .3rem; font-weight: 500; vertical-align: middle; border: 1px solid var(--ligne);
+  line-height: 1.2;
+}
+.badge-transit.lente {
+  background: rgba(107, 79, 163, .12); color: var(--accent); border-color: var(--accent);
+}
+.badge-transit.intermediaire {
+  background: rgba(176, 138, 46, .12); color: var(--fusion); border-color: var(--fusion);
+}
+.badge-transit.rapide, .badge-transit.fugace {
+  background: transparent; color: var(--doux);
+}
+
+/* ---------- Filtre ---------- */
+.filtre { border: 0; padding: 0; margin: 0; display: flex; gap: .3rem; align-items: flex-end; flex-wrap: wrap; }
+.filtre legend { font-size: .8rem; color: var(--doux); padding: 0; margin-bottom: .25rem; }
+.filtre label { flex-direction: row; align-items: center; gap: .3rem; font-size: .9rem; color: var(--texte);
+  border: 1px solid var(--ligne); background: var(--carte); border-radius: 999px; padding: .4rem .75rem; cursor: pointer; }
+.filtre input { margin: 0; accent-color: var(--accent); }
+.filtre label:has(input:checked) { border-color: var(--accent); }
+.carte[hidden] { display: none; }
+
+/* ---------- Infobulles ---------- */
+.carte h2 { display: flex; align-items: center; gap: .5rem; }
+.info { width: 1.4rem; height: 1.4rem; border-radius: 50%; border: 1px solid var(--ligne); background: transparent;
+  color: var(--doux); font: inherit; font-size: .8rem; font-weight: 600; cursor: pointer; padding: 0; line-height: 1; }
+.info:hover, .info[aria-expanded="true"] { color: var(--accent); border-color: var(--accent); }
+.bulle { position: absolute; z-index: 10; background: var(--carte); color: var(--texte); border: 1px solid var(--ligne);
+  border-radius: 12px; padding: 1rem; box-shadow: 0 8px 28px rgba(0,0,0,.12); font-size: .88rem; }
+.bulle p { margin: .3rem 0 .6rem; color: var(--doux); }
+.bulle h4 { margin: .5rem 0 0; font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; }
+.bulle-pied { margin-top: .6rem; padding-top: .4rem; border-top: 1px solid var(--ligne); text-align: right; }
+.lien-methode { font-size: .82rem; font-weight: 600; color: var(--accent); }
+
+/* ---------- Calcul détaillé ---------- */
+.calcul { margin-top: .3rem; font-size: .82rem; }
+.calcul summary { cursor: pointer; color: var(--accent); width: max-content; }
+.calcul ol { margin: .4rem 0 0; padding-left: 1.2rem; color: var(--doux); font-variant-numeric: tabular-nums; }
+
+/* ---------- Termes du glossaire ----------
+   Un terme cliquable garde l'apparence du texte, souligné en pointillés
+   pour signaler qu'il a une définition. */
+.terme { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: help;
+  text-decoration: underline dotted var(--doux); text-underline-offset: 3px; }
+.terme:hover, .terme[aria-expanded="true"] { color: var(--accent); text-decoration-color: var(--accent); }
+.astres .g .terme, .aspects li > span:first-child .terme { text-decoration: none; }
+
+/* ---------- Dignité (planète en signe) ---------- */
+.dignite { display: inline-block; margin: .3rem 0 .1rem; padding: .1rem .55rem; border-radius: 999px;
+  font-size: .75rem; border: 1px solid var(--ligne); color: var(--doux); }
+.dignite-domicile, .dignite-exaltation { color: var(--harmonie); border-color: var(--harmonie); }
+.dignite-exil, .dignite-chute { color: var(--tension); border-color: var(--tension); }
+
+/* ---------- Profils ---------- */
+.profil-choix { display: flex; align-items: flex-end; gap: .4rem; }
+.lien { font: inherit; font-size: .85rem; background: none; border: 0; padding: .45rem .2rem; color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.lien.danger { color: var(--tension); font-weight: 600; }
+.controles label[hidden] { display: none; }
+
+.panneau { width: min(460px, calc(100vw - 32px)); max-height: calc(100vh - 32px); border: 1px solid var(--ligne);
+  border-radius: 14px; padding: 1.2rem; background: var(--carte); color: var(--texte); }
+.panneau::backdrop { background: rgba(20, 16, 28, .35); }
+.panneau-entete { display: flex; justify-content: space-between; align-items: center; }
+.panneau h2 { margin: 0; font-size: 1.1rem; }
+.panneau h3 { margin: 1rem 0 .5rem; font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; color: var(--doux); }
+.fermer { font-size: 1.5rem; line-height: 1; background: none; border: 0; color: var(--doux); cursor: pointer; padding: 0 .3rem; }
+
+.liste-profils { list-style: none; margin: .8rem 0 0; padding: 0; }
+.liste-profils li { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .3rem;
+  padding: .5rem 0; border-bottom: 1px solid var(--ligne); }
+.liste-profils small { color: var(--doux); }
+.liste-profils .vide { color: var(--doux); justify-content: flex-start; }
+
+.form-profil label { display: flex; flex-direction: column; gap: .25rem; font-size: .8rem; color: var(--doux); margin-bottom: .6rem; }
+.form-profil input { font: inherit; font-size: 1rem; padding: .45rem .6rem; border: 1px solid var(--ligne); border-radius: 8px; background: var(--fond); color: var(--texte); }
+.form-profil .actions { display: flex; gap: .5rem; align-items: center; }
+.principal { font: inherit; font-size: .9rem; padding: .5rem 1rem; border: 0; border-radius: 8px; background: var(--accent); color: var(--carte); cursor: pointer; }
+.erreur { color: var(--tension); font-size: .85rem; margin: 0 0 .6rem; }
+.panneau-pied { margin-top: 1rem; padding-top: .6rem; border-top: 1px solid var(--ligne); display: flex; flex-direction: column; }
+.panneau-pied small { color: var(--doux); }
+
+/* ---------- En-tête : liens secondaires ---------- */
+.entete-liens { margin-top: .5rem; }
+
+/* ---------- Panneau Méthodologie & Pédagogie ---------- */
+.panneau.panneau-large {
+  width: min(720px, calc(100vw - 32px));
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+}
+.panneau-onglets { display: flex; gap: .5rem; margin: 1rem 0 .8rem; border-bottom: 1px solid var(--ligne); padding-bottom: .6rem; flex-wrap: wrap; }
+.panneau-onglets .onglet {
+  background: var(--carte); border: 1px solid var(--ligne); border-radius: 999px;
+  padding: .4rem .9rem; font: inherit; font-size: .85rem; color: var(--doux); cursor: pointer;
+  transition: all .15s ease;
+}
+.panneau-onglets .onglet:hover { color: var(--accent); border-color: var(--accent); }
+.panneau-onglets .onglet.actif { background: var(--accent); color: var(--carte); border-color: var(--accent); font-weight: 600; }
+
+.panneau-intro { margin-bottom: 1rem; color: var(--doux); font-size: .9rem; font-style: italic; }
+.corps-methodologie { display: flex; flex-direction: column; gap: 1rem; }
+
+.fiche-methode {
+  background: var(--fond); border: 1px solid var(--ligne); border-radius: 12px;
+  padding: 1.1rem; scroll-margin-top: 1rem; transition: border-color .3s, box-shadow .3s;
+}
+.fiche-methode.ciblee {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.fiche-methode h3 { margin: 0 0 .3rem; font-size: 1.05rem; color: var(--texte); }
+.fiche-methode .resume { margin: 0 0 .8rem; font-size: .9rem; color: var(--accent); font-weight: 500; }
+.fiche-methode p { margin: .5rem 0; font-size: .9rem; color: var(--texte); line-height: 1.55; }
+.cadre-formule {
+  background: var(--carte); border-left: 3px solid var(--accent); padding: .7rem .9rem;
+  margin: .8rem 0; border-radius: 0 8px 8px 0; font-size: .86rem;
+}
+.cadre-formule strong { display: block; margin-bottom: .3rem; font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; color: var(--doux); }
+.cadre-formule pre {
+  margin: 0; font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: .85rem; white-space: pre-wrap; word-break: break-word; color: var(--texte);
+}
+
+/* ---------- Fiches glossaire ---------- */
+/* La pastille d'un nombre est un bouton (.terme) : on lui rend son apparence de pastille. */
+.nombre .terme.chiffre { background: var(--accent); color: var(--carte); text-decoration: none; cursor: pointer; }
+.nombre .terme.chiffre:hover, .nombre .terme.chiffre[aria-expanded="true"] { color: var(--carte); box-shadow: 0 0 0 3px var(--ligne); }
+.bulle-pied { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .2rem .8rem; }
+
+.recherche-fiches { display: flex; flex-direction: column; gap: .25rem; font-size: .8rem; color: var(--doux); margin-bottom: .8rem; }
+.recherche-fiches input {
+  font: inherit; font-size: 1rem; padding: .45rem .6rem; border: 1px solid var(--ligne);
+  border-radius: 8px; background: var(--carte); color: var(--texte);
+}
+.corps-fiches { display: flex; flex-direction: column; gap: .5rem; }
+.fiche {
+  background: var(--fond); border: 1px solid var(--ligne); border-radius: 12px;
+  padding: .7rem .9rem; scroll-margin-top: 1rem; transition: border-color .3s, box-shadow .3s;
+}
+.fiche.ciblee { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.fiche summary { cursor: pointer; display: flex; flex-wrap: wrap; gap: .1rem .6rem; align-items: baseline; }
+.fiche summary strong { color: var(--texte); }
+.fiche summary span { color: var(--doux); font-size: .88rem; }
+.fiche-corps { margin-top: .5rem; border-top: 1px solid var(--ligne); padding-top: .3rem; }
+.fiche-corps h4 { margin: .7rem 0 .1rem; font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; color: var(--doux); }
+.fiche-corps p { margin: .2rem 0; font-size: .9rem; }
+.domaines-fiche { display: grid; grid-template-columns: max-content 1fr; gap: .25rem .8rem; margin: .3rem 0; font-size: .9rem; }
+.domaines-fiche dt { font-weight: 600; color: var(--accent); }
+.domaines-fiche dd { margin: 0; }
+.liens-fiche .lien { padding: .2rem .1rem; margin-right: .4rem; }
+@media (max-width: 480px) {
+  .domaines-fiche { grid-template-columns: 1fr; }
+  .domaines-fiche dd { margin-bottom: .3rem; }
+}

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Toiles — tests</title>
+  <link rel="stylesheet" href="../src/toiles.css">
+  <style>
+    main { max-width: 760px; margin: 0 auto; padding: 0 1rem 2rem; }
+    .bilan { font-size: 1.1rem; font-weight: 600; margin: 0 0 1rem; }
+    .bilan.ok { color: var(--harmonie); } .bilan.ko { color: var(--tension); }
+    ul { list-style: none; padding: 0; margin: 0 0 1rem; }
+    li { padding: .4rem .6rem; border-left: 3px solid var(--harmonie); margin: .3rem 0; background: var(--carte); border-radius: 4px; }
+    li.ko { border-left-color: var(--tension); }
+    li small { display: block; color: var(--tension); margin-top: .2rem; }
+  </style>
+</head>
+<body>
+  <header class="entete">
+    <h1>Toiles</h1>
+    <p>Tests permanents — à relancer après chaque modification</p>
+  </header>
+  <main>
+    <p class="bilan" id="bilan">Tests en cours…</p>
+    <div id="resultats"></div>
+    <p><small>Note : les tests de profils travaillent sur un profil temporaire qu’ils suppriment aussitôt ; tes profils ne sont pas modifiés.</small></p>
+  </main>
+
+  <!-- Mêmes modules que index.html, puis la description des tests. -->
+  <script src="../src/numerologie.js"></script>
+  <script src="../src/astres.js"></script>
+  <script src="../src/transits.js"></script>
+  <script src="../src/textes.js"></script>
+  <script src="../src/glossaire.js"></script>
+  <script src="../src/positions.js"></script>
+  <script src="../src/fiches.js"></script>
+  <script src="../src/profils.js"></script>
+  <script src="../src/methodologie.js"></script>
+  <script src="tests.js"></script>
+  <script>
+    // Exécute chaque test et affiche une ligne verte (réussi) ou rouge (échec + raison).
+    (function () {
+      const echapper = (t) => String(t).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
+      let ok = 0, ko = 0, html = '', groupe = '';
+      for (const t of Toiles.tests.liste) {
+        if (t.groupe !== groupe) {
+          html += (groupe ? '</ul>' : '') + `<h3>${t.groupe}</h3><ul>`;
+          groupe = t.groupe;
+        }
+        try {
+          t.fn();
+          ok++;
+          html += `<li>✓ ${echapper(t.nom)}</li>`;
+        } catch (e) {
+          ko++;
+          html += `<li class="ko">✗ ${echapper(t.nom)}<small>${echapper(e.message)}</small></li>`;
+        }
+      }
+      document.getElementById('resultats').innerHTML = html + '</ul>';
+      const bilan = document.getElementById('bilan');
+      bilan.textContent = ko ? `${ko} échec(s), ${ok} réussi(s)` : `Tout est bon : ${ok} tests réussis`;
+      bilan.className = 'bilan ' + (ko ? 'ko' : 'ok');
+    })();
+  </script>
+</body>
+</html>

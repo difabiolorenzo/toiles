@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Toiles</title>
+  <link rel="stylesheet" href="src/toiles.css">
+</head>
+<body>
+  <header class="entete">
+    <h1>Toiles</h1>
+    <p>Numérologie et dynamiques célestes</p>
+    <div class="entete-liens">
+      <button type="button" class="lien" id="ouvrir-methodologie">Méthodologie &amp; Pédagogie</button>
+      <button type="button" class="lien" id="ouvrir-fiches">Fiches glossaire</button>
+    </div>
+  </header>
+
+  <form class="controles" id="form">
+    <label>Date étudiée <input type="date" id="date" required></label>
+    <!-- Profil : « Aucun », les profils enregistrés, ou « Autre date… » (saisie libre). -->
+    <div class="profil-choix">
+      <label>Profil <select id="profil"></select></label>
+      <button type="button" class="lien" id="gerer">Gérer</button>
+    </div>
+    <label id="champ-naissance" hidden>Naissance <input type="date" id="naissance"></label>
+    <label>Domaine
+      <select id="domaine"></select>
+    </label>
+    <!-- Filtre : quelles cartes afficher. Le choix est mémorisé dans le navigateur. -->
+    <fieldset class="filtre" id="filtre">
+      <legend>Afficher</legend>
+      <label><input type="radio" name="vue" value="tout" checked> Tout</label>
+      <label><input type="radio" name="vue" value="numerologie"> Numérologie</label>
+      <label><input type="radio" name="vue" value="ciel"> Ciel</label>
+      <label><input type="radio" name="vue" value="transits"> Transits</label>
+    </fieldset>
+  </form>
+
+  <!-- data-module : sert au filtre. data-info : clé de l'infobulle dans src/textes.js -->
+  <main class="grille">
+    <section class="carte" data-module="numerologie">
+      <h2>Numérologie <button type="button" class="info" data-info="numerologie" aria-label="Comment ça marche ?">?</button></h2>
+      <div id="numero"></div>
+    </section>
+    <section class="carte" data-module="ciel">
+      <h2>Ciel du moment <button type="button" class="info" data-info="ciel" aria-label="Comment ça marche ?">?</button></h2>
+      <div id="lune" class="lune"></div>
+      <table class="astres" id="astres"></table>
+    </section>
+    <section class="carte" data-module="ciel">
+      <h2>Dynamique des énergies <button type="button" class="info" data-info="dynamique" aria-label="Comment ça marche ?">?</button></h2>
+      <div id="dynamique"></div>
+    </section>
+    <section class="carte" data-module="ciel">
+      <h2>Aspects majeurs <button type="button" class="info" data-info="aspects" aria-label="Comment ça marche ?">?</button></h2>
+      <ul class="aspects" id="aspects"></ul>
+    </section>
+    <section class="carte" data-module="transits">
+      <h2>Transits personnels <button type="button" class="info" data-info="transits" aria-label="Comment ça marche ?">?</button></h2>
+      <div id="transits"></div>
+    </section>
+  </main>
+
+  <!-- Panneau de gestion des profils. <dialog> est natif : pas de fenêtre du navigateur (alert/confirm). -->
+  <dialog class="panneau" id="panneau-profils" aria-labelledby="titre-profils">
+    <div class="panneau-entete">
+      <h2 id="titre-profils">Profils</h2>
+      <button type="button" class="fermer" id="fermer-profils" aria-label="Fermer">×</button>
+    </div>
+    <ul class="liste-profils" id="liste-profils"></ul>
+
+    <form class="form-profil" id="form-profil">
+      <h3 id="titre-form">Nouveau profil</h3>
+      <label>Nom <input type="text" id="profil-nom" autocomplete="off" required></label>
+      <label>Date de naissance <input type="date" id="profil-naissance" required></label>
+      <p class="erreur" id="profil-erreur" hidden></p>
+      <div class="actions">
+        <button type="submit" class="principal" id="profil-valider">Ajouter</button>
+        <button type="button" class="lien" id="profil-annuler" hidden>Annuler</button>
+      </div>
+    </form>
+
+    <div class="panneau-pied">
+      <button type="button" class="lien" id="exporter">Exporter les profils (.json)</button>
+      <small>Sauvegarde dans un fichier, au cas où le navigateur effacerait ses données.</small>
+    </div>
+  </dialog>
+
+  <!-- Panneau Méthodologie & Pédagogie. <dialog> est natif : zéro dépendance. -->
+  <dialog class="panneau panneau-large" id="panneau-methodologie" aria-labelledby="titre-methodologie">
+    <div class="panneau-entete">
+      <h2 id="titre-methodologie">Méthodologie &amp; Pédagogie</h2>
+      <button type="button" class="fermer" id="fermer-methodologie" aria-label="Fermer">×</button>
+    </div>
+    <div class="panneau-onglets" id="onglets-methodologie" role="tablist">
+      <button type="button" class="onglet actif" data-onglet="numerologie" role="tab" aria-selected="true">Numérologie</button>
+      <button type="button" class="onglet" data-onglet="ciel" role="tab" aria-selected="false">Ciel &amp; Dynamiques</button>
+    </div>
+    <p class="panneau-intro" id="intro-methodologie"></p>
+    <div class="corps-methodologie" id="corps-methodologie"></div>
+  </dialog>
+
+  <!-- Panneau Fiches glossaire : une fiche par nombre, signe, planète, aspect et notion.
+       Le contenu vient de src/glossaire.js, assemblé par src/fiches.js, affiché par src/app.js. -->
+  <dialog class="panneau panneau-large" id="panneau-fiches" aria-labelledby="titre-fiches">
+    <div class="panneau-entete">
+      <h2 id="titre-fiches">Fiches glossaire</h2>
+      <button type="button" class="fermer" id="fermer-fiches" aria-label="Fermer">×</button>
+    </div>
+    <div class="panneau-onglets" id="onglets-fiches" role="tablist"></div>
+    <label class="recherche-fiches">Rechercher
+      <input type="search" id="recherche-fiches" placeholder="ex. courage, Saturne, 7…" autocomplete="off">
+    </label>
+    <div class="corps-fiches" id="corps-fiches"></div>
+  </dialog>
+
+  <!-- Infobulle unique, déplacée sous le bouton « ? » cliqué. -->
+  <div class="bulle" id="bulle" role="dialog" hidden></div>
+
+  <!-- Scripts classiques (pas de modules ES) pour que le double-clic fonctionne. L'ordre compte. -->
+  <script src="src/numerologie.js"></script>
+  <script src="src/astres.js"></script>
+  <script src="src/transits.js"></script>
+  <script src="src/textes.js"></script>
+  <script src="src/glossaire.js"></script>
+  <script src="src/positions.js"></script>
+  <script src="src/fiches.js"></script>
+  <script src="src/profils.js"></script>
+  <script src="src/methodologie.js"></script>
+  <script src="src/app.js"></script>
+</body>
+</html>
