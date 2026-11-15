@@ -8,7 +8,7 @@ const chemin = require('path');
 const racine = chemin.join(__dirname, '..');
 
 // Même ordre que dans index.html.
-for (const f of ['numerologie', 'astres', 'transits', 'textes', 'glossaire', 'positions', 'fiches', 'profils', 'methodologie'])
+for (const f of ['numerologie', 'astres', 'schemas', 'transits', 'textes', 'glossaire', 'positions', 'fiches', 'profils', 'methodologie', 'croisee'])
   require(chemin.join(racine, 'src', f + '.js'));
 require(chemin.join(__dirname, 'tests.js'));
 

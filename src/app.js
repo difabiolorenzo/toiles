@@ -12,7 +12,7 @@
  */
 (function () {
   'use strict';
-  const { numerologie: N, astres: A, transits: TR, textes: TXT, glossaire: G, methodologie: M, fiches: F, cleGlossaire, cleNombre } = window.Toiles;
+  const { numerologie: N, astres: A, schemas: S, transits: TR, textes: TXT, glossaire: G, methodologie: M, fiches: F, croisee: C, cleGlossaire, cleNombre } = window.Toiles;
 
   // Stocke les transits calculés pour la date courante (utilisé par contenuTransit lors du clic)
   let transitsCourants = [];
@@ -58,7 +58,8 @@
   /** Montre les cartes dont data-module correspond au choix ("tout" = toutes). */
   function appliquerFiltre(choix) {
     document.querySelectorAll('.carte[data-module]').forEach((carte) => {
-      carte.hidden = choix !== 'tout' && carte.dataset.module !== choix;
+      // La Synthèse du jour reste toujours visible : c'est le résumé de tout le reste.
+      carte.hidden = choix !== 'tout' && carte.dataset.module !== 'synthese' && carte.dataset.module !== choix;
     });
   }
 
@@ -327,14 +328,16 @@
 
     // Positions
     // Chaque symbole et chaque nom ouvre sa définition (glossaire).
+    // Degrés entiers dans le texte (22° Scorpion) : les décimales restent
+    // dans le calcul détaillé. On tronque (22,9° → 22°), comme les éphémérides.
+    // \uFE0E après un glyphe force le rendu « texte » (pas d'émoji en couleur).
     $('astres').innerHTML = dyn.positions.map((x) => `
       <tr>
-        <td class="g">${terme(x.cle, x.glyphe, x.nom)}</td>
+        <td class="g">${terme(x.cle, x.glyphe + '\uFE0E', x.nom)}</td>
         <td><button type="button" class="terme" data-position="${x.cle}" data-signe="${x.signe.index}"
-              aria-label="${x.nom} en ${x.signe.nom} : lecture">${x.nom}</button></td>
-        <td>${terme(cleGlossaire(x.signe.nom), `${x.signe.glyphe} ${x.signe.nom}`)}</td>
-        <td class="num">${terme('degre', x.signe.degre.toFixed(1) + '°', 'Degré')}</td>
-        <td>${x.retrograde ? terme('retrograde', '<span class="retro">℞</span>', `${x.nom} rétrograde`, x.cle) : ''}</td>
+              aria-label="${x.nom} en ${x.signe.nom} : lecture">${x.nom}</button>${x.retrograde
+          ? ' ' + terme('retrograde', '<span class="retro" title="rétrograde">℞</span>', `${x.nom} rétrograde`, x.cle) : ''}</td>
+        <td class="num">${terme('degre', Math.floor(x.signe.degre) + '°', 'Degré')} ${terme(cleGlossaire(x.signe.nom), `<span class="glyphe">${x.signe.glyphe}\uFE0E</span> ${x.signe.nom}`, x.signe.nom)}</td>
       </tr>`).join('');
 
     // Dynamique
@@ -353,15 +356,164 @@
     $('aspects').innerHTML = dyn.aspects.slice(0, 10).map((x, i) => `
       <li class="${x.nature}">
         <span>${terme(x.a, A.ASTRES[x.a].glyphe, A.ASTRES[x.a].nom)} ${terme(cleGlossaire(x.nom), x.glyphe, x.nom)} ${terme(x.b, A.ASTRES[x.b].glyphe, A.ASTRES[x.b].nom)}</span>
-        <span>${A.ASTRES[x.a].nom} ${x.nom.toLowerCase()} ${A.ASTRES[x.b].nom}</span>
+        <span>${A.ASTRES[x.a].nom} ${x.nom.toLowerCase()} ${A.ASTRES[x.b].nom} <small class="nature">${x.nature}</small></span>
         <em><button type="button" class="terme" data-aspect="${i}"
               aria-label="Calcul de l'aspect">${x.ecart.toFixed(1).replace('.', ',')}°</button></em></li>`).join('') || '<li>Aucun aspect majeur.</li>';
+  }
+
+  // ===================== Synthèse du jour =====================
+  //
+  // Le résumé en tête de page : teinte (élément dominant), nombre du jour,
+  // tendance, Lune. Les calculs viennent de src/astres.js (teinteDuJour,
+  // phaseLunaire) et src/numerologie.js (additionDuJour) ; ici, seulement l'affichage.
+
+  const NOMS_ELEMENTS = { feu: 'Feu', terre: 'Terre', air: 'Air', eau: 'Eau' };
+
+  function rendreSynthese(date, pos) {
+    const teinte = A.teinteDuJour(pos);
+    const lune = A.phaseLunaire(date);
+    const nombre = N.additionDuJour(date);
+    const nomElement = NOMS_ELEMENTS[teinte.element];
+    $('synthese').innerHTML = `
+      <div class="synthese-teinte">
+        <p class="heading">Teinte du jour : ${terme(teinte.element, nomElement)}</p>
+        <div class="barre-proportion" role="img" aria-label="${teinte.nombre} astres sur ${teinte.total} en ${nomElement}">
+          <span style="width:${(teinte.proportion * 100).toFixed(1)}%"></span>
+        </div>
+        <p class="caption">${teinte.nombre} astres sur ${teinte.total} en ${nomElement} (${pct(teinte.proportion)})</p>
+        <p>Tendance : ${TXT.tendances[teinte.element]}</p>
+      </div>
+      <div class="synthese-nombre">
+        <span class="label">Nombre du jour</span>
+        <button type="button" class="terme numeral" data-glossaire="${cleNombre(nombre.valeur)}" aria-label="Nombre ${nombre.valeur} : définition">${nombre.valeur}</button>
+        <span class="caption">${nombre.texte}</span>
+      </div>
+      <div class="synthese-lune">
+        <span class="disque" style="--ill:${lune.illumination};--sens:${lune.croissante ? 1 : -1}"></span>
+        <span>${terme('phase', lune.nom)}<br><span class="caption">${pct(lune.illumination)} éclairée</span></span>
+      </div>`;
+  }
+
+  // ===================== Lecture croisée & Leçon du jour =====================
+  //
+  // Les phrases sont construites dans src/croisee.js (calcul pur) ;
+  // ici on les met en page et on rend cliquables les termes du glossaire.
+
+  /** Petit libellé de la relation entre deux éléments (écho, complices, contraste…). */
+  const LIBELLES_RELATIONS = { echo: 'écho', complices: 'complices', contraste: 'contraste', harmonie: 'harmonie', tension: 'tension', fusion: 'fusion' };
+
+  function rendreCroisee(date, naissance, domaine) {
+    const L = C.lire(date, naissance, domaine);
+    const corr = L.correspondance;
+    const planete = A.ASTRES[corr.planete];
+    $('croisee').innerHTML = `
+      <div class="nombre">
+        <button type="button" class="terme chiffre" data-glossaire="${cleNombre(L.nombre)}" aria-label="Nombre ${L.nombre} : définition">${L.nombre}</button>
+        <div>
+          <strong>Jour ${L.source} ↔ ${terme(corr.planete, planete.glyphe + '︎ ' + planete.nom, planete.nom)} ↔ ${terme(corr.element, NOMS_ELEMENTS[corr.element])}</strong>
+          <p class="caption">Le ${L.nombre} est relié à ${planete.nom} (domicile : ${corr.domicile})</p>
+        </div>
+      </div>
+      <h3>Correspondances</h3>
+      <ul class="correspondances">${L.correspondances.map((c) => `
+        <li>${c.relation ? `<small class="nature">${LIBELLES_RELATIONS[c.relation]}</small> ` : ''}${c.texte}</li>`).join('')}
+      </ul>
+      <h3>${LIBELLES_DOMAINES[domaine]}</h3>
+      <dl class="domaines-fiche">
+        <dt>Côté nombre</dt><dd>${L.domaine.coteNombre}</dd>
+        <dt>Côté ciel</dt><dd>${L.domaine.coteCiel}</dd>
+        <dt>Ensemble</dt><dd>${L.domaine.liaison}</dd>
+      </dl>`;
+  }
+
+  function rendreLecon(date) {
+    const l = C.lecon(date);
+    $('lecon').innerHTML = `
+      <p class="heading">${terme(l.cle, l.titre)}</p>
+      <p><strong>Pourquoi aujourd’hui ?</strong> ${l.pourquoi}</p>
+      <p>${l.texte}</p>
+      ${l.effet ? `<p>${l.effet}</p>` : ''}
+      ${l.propre ? `<p><strong>Pour ${A.ASTRES[l.propre.astre].nom} :</strong> ${l.propre.texte}</p>` : ''}
+      <p class="liens-fiche">
+        <button type="button" class="lien" data-fiche="${l.cle}">Fiche complète →</button>
+        <button type="button" class="lien" data-methode="${l.methode}">En savoir plus →</button>
+      </p>`;
+  }
+
+  /**
+   * Étoiles du thème sombre : des points posés au hasard… mais un hasard FIXE
+   * (suite pseudo-aléatoire à graine constante), pour qu'elles ne sautent pas
+   * à chaque changement de date. En thème clair, le jeton --star vaut la
+   * couleur de la carte : elles sont invisibles.
+   */
+  function semerEtoiles() {
+    let graine = 7;
+    const hasard = () => { graine = (graine * 16807) % 2147483647; return graine / 2147483647; };
+    let html = '';
+    for (let i = 0; i < 40; i++) {
+      html += `<i style="left:${(hasard() * 100).toFixed(1)}%;top:${(hasard() * 100).toFixed(1)}%;animation-delay:${(hasard() * 4).toFixed(1)}s"></i>`;
+    }
+    $('etoiles').innerHTML = html;
+  }
+
+  // ===================== Schémas du ciel =====================
+  //
+  // La géométrie (où poser chaque point) est calculée par src/schemas.js ;
+  // ici on écrit les balises SVG. Les couleurs viennent des jetons CSS
+  // (classes .schema-…), pour suivre automatiquement le thème.
+
+
+  function rendreCarteGeo(pos) {
+    const g = S.carteGeocentrique(pos);
+    const c = g.centre;
+    let svg = `<svg class="schema" viewBox="0 0 ${g.taille} ${g.taille}" role="img" aria-labelledby="titre-geo">
+      <title id="titre-geo">Positions des astres dans le zodiaque, vues depuis la Terre</title>
+      <circle class="schema-trait" cx="${c}" cy="${c}" r="${g.rayonExterieur}"/>
+      <circle class="schema-trait" cx="${c}" cy="${c}" r="${g.rayonInterieur}"/>`;
+    // Les 12 signes : un trait de séparation et le glyphe au milieu du secteur.
+    for (const sg of g.signes) {
+      const signe = A.SIGNES[sg.index];
+      svg += `<line class="schema-trait" x1="${sg.traitInterieur.x}" y1="${sg.traitInterieur.y}" x2="${sg.traitExterieur.x}" y2="${sg.traitExterieur.y}"/>
+        <text class="schema-signe" x="${sg.glyphe.x}" y="${sg.glyphe.y}"><title>${signe.nom}</title>${signe.glyphe}\uFE0E</text>`;
+    }
+    // Les astres : petit repère sur l'anneau, et un trait fin vers le glyphe s'il a reculé.
+    for (const a of g.astres) {
+      const p = pos.find((x) => x.cle === a.cle);
+      const titre = `${p.nom} : ${Math.floor(p.signe.degre)}° ${p.signe.nom}${p.retrograde ? ' ℞ (rétrograde)' : ''}`;
+      if (a.niveau > 0) {
+        svg += `<line class="schema-lien" x1="${a.repere.x}" y1="${a.repere.y}" x2="${a.point.x}" y2="${a.point.y}"/>`;
+      }
+      svg += `<circle class="schema-repere" cx="${a.repere.x}" cy="${a.repere.y}" r="2"/>
+        <text class="schema-astre" x="${a.point.x}" y="${a.point.y}"><title>${echapper(titre)}</title>${p.glyphe}\uFE0E</text>`;
+    }
+    // La Terre au centre : le point de vue.
+    svg += `<circle class="schema-terre" cx="${c}" cy="${c}" r="7"><title>La Terre (point de vue)</title></circle></svg>`;
+    $('carte-geo').innerHTML = svg;
+  }
+
+  function rendreCarteHelio(date) {
+    const h = S.carteHeliocentrique(A.positionsHeliocentriques(date));
+    const c = h.centre;
+    let svg = `<svg class="schema" viewBox="0 0 ${h.taille} ${h.taille}" role="img" aria-labelledby="titre-helio">
+      <title id="titre-helio">Les planètes sur leurs orbites autour du Soleil, vues de dessus</title>`;
+    for (const o of h.orbites) {
+      svg += `<circle class="schema-orbite" cx="${c}" cy="${c}" r="${o.rayon}"/>`;
+    }
+    svg += `<circle class="schema-soleil" cx="${c}" cy="${c}" r="10"><title>Soleil</title></circle>`;
+    for (const o of h.orbites) {
+      const estTerre = o.cle === 'terre';
+      const nom = estTerre ? 'Terre' : A.ASTRES[o.cle].nom;
+      const titre = `${nom} : ${Math.floor(o.lon)}° de longitude héliocentrique`;
+      svg += `<circle class="${estTerre ? 'schema-terre' : 'schema-planete'}" cx="${o.point.x}" cy="${o.point.y}" r="${estTerre ? 6 : 4.5}"><title>${echapper(titre)}</title></circle>`;
+    }
+    svg += '</svg>';
+    $('carte-helio').innerHTML = svg;
   }
 
   function rendreTransits(date, naissance) {
     if (!naissance) {
       transitsCourants = [];
-      $('transits').innerHTML = '<p class="aide-profil">Sélectionnez un profil ou saisissez une date de naissance pour afficher vos transits personnels.</p>';
+      $('transits').innerHTML = '<p class="aide-profil">Choisis un profil ou saisis une date de naissance pour afficher tes transits personnels.</p>';
       return;
     }
 
@@ -371,7 +523,7 @@
 
     let html = `<div class="natal-resume"><small>Thème natal calculé au ${dateFr(versChamp(theme.date))} (midi TU)</small></div>`;
     if (theme.luneChangeDeSigne) {
-      html += `<div class="avertissement-lune"><span aria-hidden="true">⚠️</span> <div>${theme.avertissementLune}</div></div>`;
+      html += `<div class="avertissement-lune"><strong>À noter</strong> <div>${theme.avertissementLune}</div></div>`;
     }
 
     if (res.transits.length === 0) {
@@ -386,6 +538,7 @@
               <strong>${A.ASTRES[c.cle].nom}</strong> <small>(ciel)</small>
               ${t.nom.toLowerCase()}
               <strong>${A.ASTRES[n.cle].nom}</strong> <small>(natal)</small>
+              <small class="nature">${t.nature}</small>
               <span class="badge-transit ${t.categorie.type}">${t.categorie.libelle}</span>
             </span>
             <em><button type="button" class="terme" data-transit="${i}" aria-label="Calcul du transit">${t.ecart.toFixed(1).replace('.', ',')}°</button></em>
@@ -715,8 +868,14 @@
     const date = lireDate($('date').value);
     const naissance = naissanceCourante();
     rendreNumerologie(date, naissance, $('domaine').value);
+    const pos = A.positions(date);
+    rendreSynthese(date, pos);
     rendreCiel(date);
+    rendreCarteGeo(pos);
+    rendreCarteHelio(date);
     rendreTransits(date, naissance);
+    rendreCroisee(date, naissance, $('domaine').value);
+    rendreLecon(date);
   }
 
   // ===================== 5. Démarrage =====================
@@ -725,6 +884,9 @@
     .map((d) => `<option value="${d}">${LIBELLES_DOMAINES[d]}</option>`).join('');
   $('date').value = versChamp(new Date());
 
+  // Bouton de thème clair / sombre (logique dans src/theme.js).
+  globalThis.Toiles.theme.brancherBoutonTheme($('bouton-theme'));
+  semerEtoiles();
   initFiltre();
   initInfobulles();
   initProfils();

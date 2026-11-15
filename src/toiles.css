@@ -1,148 +1,287 @@
+/* =====================================================================
+   Toiles — feuille de style
+   Les valeurs viennent du système de design « Toiles » (artefact claude.ai).
+   Deux thèmes, même structure :
+     - Carte céleste (clair) : parchemin, encres brunes, filets dorés ;
+     - Nuit vivante (sombre) : bleu nuit, lavande.
+   Règle d'or : la lisibilité passe avant l'ambiance (texte ≥ 7:1 sur son fond).
+   ===================================================================== */
+
+/* ---------- Police Inter, embarquée localement ----------
+   Pas de Google Fonts (règle « zéro CDN », et l'appli doit marcher hors ligne).
+   On essaie d'abord une Inter installée sur l'ordinateur (local), puis le
+   fichier du dossier polices/. S'il manque, le navigateur passe
+   simplement à la police système (voir --police). */
+@font-face {
+  font-family: "Inter";
+  src: local("Inter Variable"), local("Inter"), url("../polices/InterVariable.woff2") format("woff2");
+  font-weight: 100 900;   /* police « variable » : toutes les graisses, dont 450 */
+  font-style: normal;
+  font-display: swap;     /* afficher le texte tout de suite, même avant la police */
+}
+@font-face {
+  font-family: "Inter";
+  src: local("Inter Variable Italic"), local("Inter Italic"), url("../polices/InterVariable-Italic.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* ---------- Jetons : thème clair « Carte céleste » (par défaut) ---------- */
 :root {
-  --fond: #f6f3ee; --carte: #fffdf9; --texte: #26221d; --doux: #7a7064; --ligne: #e4ddd2;
-  --accent: #6b4fa3; --harmonie: #3f8a6b; --tension: #b5523b; --fusion: #b08a2e;
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* Couleurs (contraste mesuré sur --surface) */
+  --bg: #efe4cc;          /* fond de page : parchemin */
+  --surface: #f6eddb;     /* fond des cartes, panneaux, bulles */
+  --ink: #241b10;         /* texte principal (14,6:1) */
+  --ink-muted: #57452a;   /* texte secondaire, étiquettes, bordures de contrôle (7,9:1) */
+  --accent: #6e4f17;      /* remplissages (barres, pastilles) — pas pour du texte en sombre */
+  /* Pastilles et boutons pleins (nombres, bouton principal, onglet actif) :
+     fond --pastille, texte --sur-pastille. On n'y met PAS --accent : du texte
+     sur --accent n'atteint que 6,5:1 en clair et 4,2:1 en sombre (< 7:1). */
+  --pastille: var(--glyph); --sur-pastille: var(--surface);
+  --glyph: #523a10;       /* symboles ☉ ♈ ℞, liens et texte coloré. Un ton plus foncé que --accent
+                             (écart assumé avec le système de design) : 7,2:1 même sur --track. */
+  --line: #b08d4c;        /* filets et bordures de carte : décoratif seulement (2,6:1) */
+  --track: #e3d3b0;       /* fond des barres, partie sombre de la Lune, survol */
+  --sun: #241b10;
+  --earth: #3f5f80;       /* la Terre : seule touche bleue du thème clair */
+  --planet: #6e4f17;
+  --star: var(--surface); /* étoiles invisibles en clair */
+  --focus: #6e4f17;       /* anneau de focus clavier */
+  /* Nature des aspects et dignités (provisoire : le système de design
+     demande de ne pas s'appuyer sur la teinte seule — voir TODO v0.4). */
+  --harmonie: #1f4d3a; --tension: #762c1d; --fusion: #57420b;   /* ≥ 7:1 sur --bg et --surface */
+  --ombre-panneau: rgba(36, 27, 16, .18);
+  --voile: rgba(36, 27, 16, .35);       /* fond derrière un <dialog> */
+  --graisse-texte: 450;   /* le parchemin « mange » les traits fins : on épaissit */
+
+  /* Espacements : grille de 4px */
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-5: 24px; --space-6: 32px; --space-7: 48px;
+  /* Rayons */
+  --radius-sm: 6px; --radius-md: 16px; --radius-pill: 999px;
+  /* Police : Inter, sinon la police du système */
+  --police: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  color-scheme: light;
+  font-family: var(--police);
 }
+
+/* ---------- Jetons : thème sombre « Nuit vivante » ----------
+   Le thème sombre s'applique dans deux cas :
+   1. le système est en sombre ET l'utilisateur n'a pas forcé le clair ;
+   2. l'utilisateur a forcé le sombre (data-theme="dark" sur <html>).
+   CSS ne sait pas « partager » un bloc entre deux sélecteurs aussi différents,
+   d'où la répétition : si tu changes une valeur, change-la aux deux endroits. */
 @media (prefers-color-scheme: dark) {
-  :root { --fond: #14121a; --carte: #1d1a25; --texte: #ece6f5; --doux: #9d94ad; --ligne: #2e2a3a; --accent: #b39ce8; }
+  :root:not([data-theme="light"]) {
+    --bg: #080b1f; --surface: #0f1430; --ink: #f4f5ff; --ink-muted: #b8c0ff;
+    --accent: #5b6cff; --glyph: var(--ink-muted);
+    --line: #4a5596; --track: #1f2650; --sun: #ffd98a; --earth: #7fb3ff;
+    --planet: #c9ceff; --star: #ffffff; --focus: #b8c0ff;
+    --harmonie: #7fd1a8; --tension: #ff9a85; --fusion: #e6c56a;
+    --ombre-panneau: rgba(0, 0, 0, .5); --voile: rgba(0, 0, 0, .55);
+    --graisse-texte: 400;
+    color-scheme: dark;
+  }
 }
+:root[data-theme="dark"] {
+  --bg: #080b1f; --surface: #0f1430; --ink: #f4f5ff; --ink-muted: #b8c0ff;
+  --accent: #5b6cff; --glyph: var(--ink-muted);
+  --line: #4a5596; --track: #1f2650; --sun: #ffd98a; --earth: #7fb3ff;
+  --planet: #c9ceff; --star: #ffffff; --focus: #b8c0ff;
+  --harmonie: #7fd1a8; --tension: #ff9a85; --fusion: #e6c56a;
+  --ombre-panneau: rgba(0, 0, 0, .5); --voile: rgba(0, 0, 0, .55);
+  --graisse-texte: 400;
+  color-scheme: dark;
+}
+
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--fond); color: var(--texte); line-height: 1.45; }
-.entete { padding: 2rem 1rem 1rem; text-align: center; }
-.entete h1 { margin: 0; font-weight: 300; letter-spacing: .3em; text-transform: uppercase; color: var(--accent); }
-.entete p { margin: .3rem 0 0; color: var(--doux); }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-size: 19px; line-height: 28px; font-weight: var(--graisse-texte);   /* style « body » */
+  /* Changement de thème : les couleurs fondent en 0,4 s au lieu de sauter. */
+  transition: background-color .4s, color .4s;
+}
+@media (prefers-reduced-motion: reduce) { body { transition: none; } }
+/* Les contrôles n'héritent pas de la police par défaut : on la leur impose. */
+button, input, select, textarea { font-family: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* ---------- Échelle typographique (système de design) ----------
+   Une seule police ; la hiérarchie vient de la taille, de la graisse
+   et de l'espacement des lettres. Classes réutilisables partout. */
+.numeral { font-size: 76px; line-height: 1; font-weight: 300; }          /* le nombre du jour, seulement */
+.title   { font-size: 32px; line-height: 40px; font-weight: 500; letter-spacing: .12em; } /* une fois par écran */
+.heading { font-size: 22px; line-height: 30px; font-weight: 500; }       /* titres de carte */
+.data    { font-size: 19px; line-height: 28px; font-variant-numeric: tabular-nums; } /* degrés alignés */
+.label   { font-size: 15px; line-height: 22px; font-weight: 500; letter-spacing: .04em; color: var(--ink-muted); }
+.caption { font-size: 15px; line-height: 22px; font-style: italic; color: var(--ink-muted); } /* jamais d'info essentielle */
+.glyphe  { color: var(--glyph); }
+@media (max-width: 560px) {
+  .numeral { font-size: 56px; }
+  .title { font-size: 26px; line-height: 34px; }
+}
+
+/* ---------- En-tête ---------- */
+.entete { padding: var(--space-5) var(--space-4) var(--space-5); text-align: center; }
+.entete h1 { margin: 0; color: var(--ink); }
+/* Logo « L'étoile tissée » à côté du nom. Le cœur reprend la couleur du fond
+   (il « évide » le croisement des fils) ; le point central est en --glyph. */
+.titre-logo { display: inline-flex; align-items: center; gap: var(--space-3); }
+.logo { width: 40px; height: 40px; flex: none; }
+.logo-coeur { fill: var(--bg); transition: fill .4s; }
+.logo-point { fill: var(--glyph); }
+@media (max-width: 560px) { .logo { width: 32px; height: 32px; } }
+.entete p { margin: var(--space-1) 0 0; }
+.entete-outils { display: flex; justify-content: flex-end; max-width: 1200px; margin: 0 auto;
+  padding: var(--space-4) var(--space-4) 0; }
+
+/* ---------- Bouton en pilule (bouton de thème, etc.) ---------- */
+.bouton-pilule { font-size: 15px; font-weight: 500; line-height: 22px; background: transparent; color: var(--ink-muted);
+  border: 1px solid var(--ink-muted); border-radius: var(--radius-pill); padding: var(--space-1) var(--space-4); cursor: pointer; }
+.bouton-icone { width: 44px; height: 44px; padding: 0; font-size: 22px; line-height: 1; display: inline-grid; place-items: center; } /* 44px : cible tactile confortable */
+.bouton-pilule:hover { background: var(--track); color: var(--ink); } /* --ink-muted sur --track : 6,2:1 seulement */
 
 .controles { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; padding: 0 1rem 1.5rem; }
-.controles label { display: flex; flex-direction: column; font-size: .8rem; color: var(--doux); gap: .25rem; }
+.controles label { display: flex; flex-direction: column; font-size: .8rem; color: var(--ink-muted); gap: .25rem; }
 .controles input, .controles select {
-  font: inherit; font-size: 1rem; padding: .45rem .6rem; border: 1px solid var(--ligne);
-  border-radius: 8px; background: var(--carte); color: var(--texte);
+  font: inherit; font-size: 1rem; padding: .45rem .6rem; border: 1px solid var(--ink-muted);
+  border-radius: var(--radius-sm); background: var(--surface); color: var(--ink);
 }
 
-.grille { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 1rem; padding: 0 1rem 2rem; max-width: 1200px; margin: 0 auto; }
-.carte { background: var(--carte); border: 1px solid var(--ligne); border-radius: 14px; padding: 1.2rem; }
-.carte h2 { margin: 0 0 1rem; font-size: 1.05rem; font-weight: 600; }
-.carte h3 { margin: 1rem 0 .5rem; font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; color: var(--doux); }
-.carte h3 small { text-transform: none; letter-spacing: 0; color: var(--accent); }
+.grille { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: var(--space-5); padding: 0 var(--space-4) var(--space-7); max-width: 1200px; margin: 0 auto; }
+.carte { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); padding: var(--space-5); }
+.carte h2 { margin: 0 0 var(--space-4); font-size: 22px; line-height: 30px; font-weight: 500; } /* style « heading » */
+.carte h3 { margin: var(--space-4) 0 var(--space-2); font-size: 15px; line-height: 22px; font-weight: 500; letter-spacing: .04em; color: var(--ink-muted); } /* style « label » */
+.carte h3 small { text-transform: none; letter-spacing: 0; color: var(--glyph); }
 
-.nombre { display: flex; gap: .8rem; align-items: flex-start; padding: .5rem 0; border-bottom: 1px solid var(--ligne); }
+.nombre { display: flex; gap: .8rem; align-items: flex-start; padding: .5rem 0; border-bottom: 1px solid var(--line); }
 .nombre:last-child { border: 0; }
-.chiffre { flex: 0 0 2.4rem; height: 2.4rem; display: grid; place-items: center; border-radius: 50%; background: var(--accent); color: var(--carte); font-weight: 700; }
-.nombre p { margin: .1rem 0 0; color: var(--doux); font-size: .9rem; }
+.chiffre { flex: 0 0 2.4rem; height: 2.4rem; display: grid; place-items: center; border-radius: 50%; background: var(--pastille); color: var(--sur-pastille); font-weight: 700; }
+.nombre p { margin: .1rem 0 0; color: var(--ink-muted); font-size: .9rem; }
 
 .lune { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
-.disque { width: 48px; height: 48px; border-radius: 50%; background: #2a2533; position: relative; overflow: hidden; box-shadow: inset 0 0 0 1px var(--ligne); }
-.disque::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: #f1e9c9;
+.disque { width: 48px; height: 48px; border-radius: 50%; background: var(--track); position: relative; overflow: hidden; box-shadow: inset 0 0 0 1px var(--line); }
+.disque::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--planet);
   clip-path: inset(0 calc((1 - var(--ill)) * 100%) 0 0); transform: scaleX(var(--sens)); }
 
 .astres { width: 100%; border-collapse: collapse; font-size: .92rem; }
-.astres td { padding: .35rem .3rem; border-bottom: 1px solid var(--ligne); }
-.astres .g { color: var(--accent); font-size: 1.1rem; width: 1.5rem; }
-.astres .num { text-align: right; font-variant-numeric: tabular-nums; }
-.retro { color: var(--tension); font-weight: 700; }
+/* Glyphe en --glyph, nom en --ink, position (style « data ») alignée à droite.
+   Séparateurs pointillés : ce sont des filets décoratifs (--line). */
+.astres td { padding: var(--space-2) var(--space-1); border-bottom: 1px dotted var(--line); }
+.astres tr:last-child td { border-bottom: 0; }
+.astres .g { color: var(--glyph); font-size: 1.1rem; width: 1.6rem; }
+.astres .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.retro { color: var(--glyph); font-weight: 600; }
 
 .barre { display: grid; grid-template-columns: 5rem 1fr 3rem; align-items: center; gap: .5rem; font-size: .85rem; margin: .25rem 0; }
-.barre i { height: 8px; border-radius: 4px; background: linear-gradient(90deg, var(--accent) calc(var(--v) * 100%), var(--ligne) 0); }
+.barre i { height: 8px; border-radius: var(--radius-pill); background: linear-gradient(90deg, var(--accent) calc(var(--v) * 100%), var(--track) 0); }
 .barre b { text-align: right; font-weight: 500; font-variant-numeric: tabular-nums; }
 
 .aspects { list-style: none; margin: 0; padding: 0; }
-.aspects li { display: grid; grid-template-columns: 4.5rem 1fr auto; gap: .5rem; padding: .4rem 0; border-bottom: 1px solid var(--ligne); font-size: .9rem; border-left: 3px solid transparent; padding-left: .5rem; }
-.aspects li.harmonie { border-left-color: var(--harmonie); }
-.aspects li.tension { border-left-color: var(--tension); }
-.aspects li.fusion { border-left-color: var(--fusion); }
-.aspects em { color: var(--doux); font-style: normal; font-variant-numeric: tabular-nums; }
+/* La nature de l'aspect (harmonie, tension, fusion) est ÉCRITE en toutes
+   lettres (.nature) et portée par son symbole : pas de code couleur seul,
+   illisible pour certains daltoniens et sans sens pour un lecteur d'écran. */
+.aspects li { display: grid; grid-template-columns: 4.5rem 1fr auto; gap: var(--space-2); padding: var(--space-2) 0; border-bottom: 1px dotted var(--line); font-size: 17px; line-height: 24px; }
+.aspects li:last-child { border-bottom: 0; }
+.aspects li > span:first-child { color: var(--glyph); }
+.nature { font-size: 15px; font-style: italic; color: var(--ink-muted); }
+.aspects em { color: var(--ink-muted); font-style: normal; font-variant-numeric: tabular-nums; }
 
 /* ---------- Transits personnels ---------- */
-.natal-resume { margin-bottom: .6rem; color: var(--doux); font-size: .85rem; }
+.natal-resume { margin-bottom: .6rem; color: var(--ink-muted); font-size: .85rem; }
 .avertissement-lune {
   display: flex; gap: .5rem; align-items: flex-start;
-  background: rgba(181, 82, 59, .08); border-left: 3px solid var(--tension);
-  border-radius: 0 8px 8px 0; padding: .6rem .8rem; margin: .5rem 0 .8rem;
-  font-size: .83rem; color: var(--texte);
+  background: var(--track); border: 1px solid var(--line);
+  border-radius: var(--radius-sm); padding: var(--space-3); margin: var(--space-2) 0 var(--space-3);
+  font-size: .83rem; color: var(--ink);
 }
-.aide-profil { color: var(--doux); font-size: .9rem; font-style: italic; margin: .5rem 0; }
+.aide-profil { color: var(--ink-muted); font-size: .9rem; font-style: italic; margin: .5rem 0; }
 .badge-transit {
   display: inline-block; font-size: .72rem; padding: .1rem .45rem; border-radius: 999px;
-  margin-left: .3rem; font-weight: 500; vertical-align: middle; border: 1px solid var(--ligne);
+  margin-left: .3rem; font-weight: 500; vertical-align: middle; border: 1px solid var(--line);
   line-height: 1.2;
 }
+/* Rythme du transit : la différence se lit dans le MOT du badge ;
+   le fond et la bordure ne font que renforcer (clarté, pas teinte). */
 .badge-transit.lente {
-  background: rgba(107, 79, 163, .12); color: var(--accent); border-color: var(--accent);
+  background: var(--track); color: var(--glyph); border-color: var(--glyph); font-weight: 600;
 }
 .badge-transit.intermediaire {
-  background: rgba(176, 138, 46, .12); color: var(--fusion); border-color: var(--fusion);
+  background: transparent; color: var(--ink-muted); border-color: var(--ink-muted);
 }
 .badge-transit.rapide, .badge-transit.fugace {
-  background: transparent; color: var(--doux);
+  background: transparent; color: var(--ink-muted);
 }
 
 /* ---------- Filtre ---------- */
 .filtre { border: 0; padding: 0; margin: 0; display: flex; gap: .3rem; align-items: flex-end; flex-wrap: wrap; }
-.filtre legend { font-size: .8rem; color: var(--doux); padding: 0; margin-bottom: .25rem; }
-.filtre label { flex-direction: row; align-items: center; gap: .3rem; font-size: .9rem; color: var(--texte);
-  border: 1px solid var(--ligne); background: var(--carte); border-radius: 999px; padding: .4rem .75rem; cursor: pointer; }
-.filtre input { margin: 0; accent-color: var(--accent); }
-.filtre label:has(input:checked) { border-color: var(--accent); }
+.filtre legend { font-size: .8rem; color: var(--ink-muted); padding: 0; margin-bottom: .25rem; }
+.filtre label { flex-direction: row; align-items: center; gap: .3rem; font-size: .9rem; color: var(--ink);
+  border: 1px solid var(--ink-muted); background: var(--surface); border-radius: var(--radius-pill); padding: .4rem .75rem; cursor: pointer; }
+.filtre input { margin: 0; accent-color: var(--glyph); }
+.filtre label:has(input:checked) { border-color: var(--glyph); background: var(--track); font-weight: 500; }
 .carte[hidden] { display: none; }
 
 /* ---------- Infobulles ---------- */
 .carte h2 { display: flex; align-items: center; gap: .5rem; }
-.info { width: 1.4rem; height: 1.4rem; border-radius: 50%; border: 1px solid var(--ligne); background: transparent;
-  color: var(--doux); font: inherit; font-size: .8rem; font-weight: 600; cursor: pointer; padding: 0; line-height: 1; }
-.info:hover, .info[aria-expanded="true"] { color: var(--accent); border-color: var(--accent); }
-.bulle { position: absolute; z-index: 10; background: var(--carte); color: var(--texte); border: 1px solid var(--ligne);
-  border-radius: 12px; padding: 1rem; box-shadow: 0 8px 28px rgba(0,0,0,.12); font-size: .88rem; }
-.bulle p { margin: .3rem 0 .6rem; color: var(--doux); }
-.bulle h4 { margin: .5rem 0 0; font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; }
-.bulle-pied { margin-top: .6rem; padding-top: .4rem; border-top: 1px solid var(--ligne); text-align: right; }
-.lien-methode { font-size: .82rem; font-weight: 600; color: var(--accent); }
+.info { width: 1.4rem; height: 1.4rem; border-radius: 50%; border: 1px solid var(--ink-muted); background: transparent;
+  color: var(--ink-muted); font: inherit; font-size: .8rem; font-weight: 600; cursor: pointer; padding: 0; line-height: 1; }
+.info:hover, .info[aria-expanded="true"] { color: var(--glyph); border-color: var(--glyph); }
+.bulle { position: absolute; z-index: 10; background: var(--surface); color: var(--ink); border: 1px solid var(--line);
+  border-radius: var(--radius-sm); padding: var(--space-4); box-shadow: 0 8px 28px var(--ombre-panneau); font-size: 15px; line-height: 22px; }
+.bulle p { margin: .3rem 0 .6rem; color: var(--ink-muted); }
+.bulle h4 { margin: var(--space-2) 0 0; font-size: 15px; line-height: 22px; font-weight: 500; letter-spacing: .04em; color: var(--ink-muted); }
+.bulle-pied { margin-top: .6rem; padding-top: .4rem; border-top: 1px solid var(--line); text-align: right; }
+.lien-methode { font-size: .82rem; font-weight: 600; color: var(--glyph); }
 
 /* ---------- Calcul détaillé ---------- */
 .calcul { margin-top: .3rem; font-size: .82rem; }
-.calcul summary { cursor: pointer; color: var(--accent); width: max-content; }
-.calcul ol { margin: .4rem 0 0; padding-left: 1.2rem; color: var(--doux); font-variant-numeric: tabular-nums; }
+.calcul summary { cursor: pointer; color: var(--glyph); width: max-content; }
+.calcul ol { margin: .4rem 0 0; padding-left: 1.2rem; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
 
 /* ---------- Termes du glossaire ----------
    Un terme cliquable garde l'apparence du texte, souligné en pointillés
    pour signaler qu'il a une définition. */
 .terme { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: help;
-  text-decoration: underline dotted var(--doux); text-underline-offset: 3px; }
-.terme:hover, .terme[aria-expanded="true"] { color: var(--accent); text-decoration-color: var(--accent); }
+  text-decoration: underline dotted var(--ink-muted); text-underline-offset: 3px; }
+.terme:hover, .terme[aria-expanded="true"] { color: var(--glyph); text-decoration-color: var(--glyph); }
 .astres .g .terme, .aspects li > span:first-child .terme { text-decoration: none; }
 
 /* ---------- Dignité (planète en signe) ---------- */
 .dignite { display: inline-block; margin: .3rem 0 .1rem; padding: .1rem .55rem; border-radius: 999px;
-  font-size: .75rem; border: 1px solid var(--ligne); color: var(--doux); }
+  font-size: .75rem; border: 1px solid var(--line); color: var(--ink-muted); }
 .dignite-domicile, .dignite-exaltation { color: var(--harmonie); border-color: var(--harmonie); }
 .dignite-exil, .dignite-chute { color: var(--tension); border-color: var(--tension); }
 
 /* ---------- Profils ---------- */
 .profil-choix { display: flex; align-items: flex-end; gap: .4rem; }
-.lien { font: inherit; font-size: .85rem; background: none; border: 0; padding: .45rem .2rem; color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.lien { font: inherit; font-size: .85rem; background: none; border: 0; padding: .45rem .2rem; color: var(--glyph); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 .lien.danger { color: var(--tension); font-weight: 600; }
 .controles label[hidden] { display: none; }
 
-.panneau { width: min(460px, calc(100vw - 32px)); max-height: calc(100vh - 32px); border: 1px solid var(--ligne);
-  border-radius: 14px; padding: 1.2rem; background: var(--carte); color: var(--texte); }
-.panneau::backdrop { background: rgba(20, 16, 28, .35); }
+.panneau { width: min(460px, calc(100vw - 32px)); max-height: calc(100vh - 32px); border: 1px solid var(--line);
+  border-radius: var(--radius-md); padding: var(--space-5); background: var(--surface); color: var(--ink); }
+.panneau::backdrop { background: var(--voile); }
 .panneau-entete { display: flex; justify-content: space-between; align-items: center; }
-.panneau h2 { margin: 0; font-size: 1.1rem; }
-.panneau h3 { margin: 1rem 0 .5rem; font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; color: var(--doux); }
-.fermer { font-size: 1.5rem; line-height: 1; background: none; border: 0; color: var(--doux); cursor: pointer; padding: 0 .3rem; }
+.panneau h2 { margin: 0; font-size: 22px; line-height: 30px; font-weight: 500; } /* style « heading » */
+.panneau h3 { margin: var(--space-4) 0 var(--space-2); font-size: 15px; line-height: 22px; font-weight: 500; letter-spacing: .04em; color: var(--ink-muted); }
+.fermer { font-size: 1.5rem; line-height: 1; background: none; border: 0; color: var(--ink-muted); cursor: pointer; padding: 0 .3rem; }
 
 .liste-profils { list-style: none; margin: .8rem 0 0; padding: 0; }
 .liste-profils li { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .3rem;
-  padding: .5rem 0; border-bottom: 1px solid var(--ligne); }
-.liste-profils small { color: var(--doux); }
-.liste-profils .vide { color: var(--doux); justify-content: flex-start; }
+  padding: .5rem 0; border-bottom: 1px solid var(--line); }
+.liste-profils small { color: var(--ink-muted); }
+.liste-profils .vide { color: var(--ink-muted); justify-content: flex-start; }
 
-.form-profil label { display: flex; flex-direction: column; gap: .25rem; font-size: .8rem; color: var(--doux); margin-bottom: .6rem; }
-.form-profil input { font: inherit; font-size: 1rem; padding: .45rem .6rem; border: 1px solid var(--ligne); border-radius: 8px; background: var(--fond); color: var(--texte); }
+.form-profil label { display: flex; flex-direction: column; gap: .25rem; font-size: .8rem; color: var(--ink-muted); margin-bottom: .6rem; }
+.form-profil input { font: inherit; font-size: 1rem; padding: .45rem .6rem; border: 1px solid var(--ink-muted); border-radius: var(--radius-sm); background: var(--bg); color: var(--ink); }
 .form-profil .actions { display: flex; gap: .5rem; align-items: center; }
-.principal { font: inherit; font-size: .9rem; padding: .5rem 1rem; border: 0; border-radius: 8px; background: var(--accent); color: var(--carte); cursor: pointer; }
+.principal { font: inherit; font-size: .9rem; padding: var(--space-2) var(--space-5); border: 0; border-radius: var(--radius-pill); font-weight: 500; background: var(--pastille); color: var(--sur-pastille); cursor: pointer; }
 .erreur { color: var(--tension); font-size: .85rem; margin: 0 0 .6rem; }
-.panneau-pied { margin-top: 1rem; padding-top: .6rem; border-top: 1px solid var(--ligne); display: flex; flex-direction: column; }
-.panneau-pied small { color: var(--doux); }
+.panneau-pied { margin-top: 1rem; padding-top: .6rem; border-top: 1px solid var(--line); display: flex; flex-direction: column; }
+.panneau-pied small { color: var(--ink-muted); }
 
 /* ---------- En-tête : liens secondaires ---------- */
 .entete-liens { margin-top: .5rem; }
@@ -153,67 +292,130 @@ body { margin: 0; background: var(--fond); color: var(--texte); line-height: 1.4
   max-height: calc(100vh - 40px);
   overflow-y: auto;
 }
-.panneau-onglets { display: flex; gap: .5rem; margin: 1rem 0 .8rem; border-bottom: 1px solid var(--ligne); padding-bottom: .6rem; flex-wrap: wrap; }
+.panneau-onglets { display: flex; gap: .5rem; margin: 1rem 0 .8rem; border-bottom: 1px solid var(--line); padding-bottom: .6rem; flex-wrap: wrap; }
 .panneau-onglets .onglet {
-  background: var(--carte); border: 1px solid var(--ligne); border-radius: 999px;
-  padding: .4rem .9rem; font: inherit; font-size: .85rem; color: var(--doux); cursor: pointer;
+  background: var(--surface); border: 1px solid var(--ink-muted); border-radius: var(--radius-pill);
+  padding: .4rem .9rem; font: inherit; font-size: .85rem; color: var(--ink-muted); cursor: pointer;
   transition: all .15s ease;
 }
-.panneau-onglets .onglet:hover { color: var(--accent); border-color: var(--accent); }
-.panneau-onglets .onglet.actif { background: var(--accent); color: var(--carte); border-color: var(--accent); font-weight: 600; }
+.panneau-onglets .onglet:hover { color: var(--glyph); border-color: var(--glyph); background: var(--track); }
+.panneau-onglets .onglet.actif { background: var(--pastille); color: var(--sur-pastille); border-color: var(--pastille); font-weight: 600; }
 
-.panneau-intro { margin-bottom: 1rem; color: var(--doux); font-size: .9rem; font-style: italic; }
+.panneau-intro { margin-bottom: 1rem; color: var(--ink-muted); font-size: .9rem; font-style: italic; }
 .corps-methodologie { display: flex; flex-direction: column; gap: 1rem; }
 
 .fiche-methode {
-  background: var(--fond); border: 1px solid var(--ligne); border-radius: 12px;
-  padding: 1.1rem; scroll-margin-top: 1rem; transition: border-color .3s, box-shadow .3s;
+  background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-sm);
+  padding: var(--space-4); scroll-margin-top: 1rem; transition: border-color .3s;
 }
 .fiche-methode.ciblee {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent);
+  border-color: var(--focus);
+  outline: 2px solid var(--focus); outline-offset: 2px;
 }
-.fiche-methode h3 { margin: 0 0 .3rem; font-size: 1.05rem; color: var(--texte); }
-.fiche-methode .resume { margin: 0 0 .8rem; font-size: .9rem; color: var(--accent); font-weight: 500; }
-.fiche-methode p { margin: .5rem 0; font-size: .9rem; color: var(--texte); line-height: 1.55; }
+.fiche-methode h3 { margin: 0 0 .3rem; font-size: 1.05rem; color: var(--ink); }
+.fiche-methode .resume { margin: 0 0 .8rem; font-size: .9rem; color: var(--glyph); font-weight: 500; }
+.fiche-methode p { margin: .5rem 0; font-size: .9rem; color: var(--ink); line-height: 1.55; }
 .cadre-formule {
-  background: var(--carte); border-left: 3px solid var(--accent); padding: .7rem .9rem;
-  margin: .8rem 0; border-radius: 0 8px 8px 0; font-size: .86rem;
+  background: var(--surface); border: 1px dashed var(--line); padding: var(--space-3) var(--space-4);
+  margin: var(--space-3) 0; border-radius: var(--radius-sm); font-size: 15px;
 }
-.cadre-formule strong { display: block; margin-bottom: .3rem; font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; color: var(--doux); }
+.cadre-formule strong { display: block; margin-bottom: var(--space-1); font-size: 15px; line-height: 22px; font-weight: 500; letter-spacing: .04em; color: var(--ink-muted); }
 .cadre-formule pre {
   margin: 0; font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  font-size: .85rem; white-space: pre-wrap; word-break: break-word; color: var(--texte);
+  font-size: .85rem; white-space: pre-wrap; word-break: break-word; color: var(--ink);
 }
 
 /* ---------- Fiches glossaire ---------- */
 /* La pastille d'un nombre est un bouton (.terme) : on lui rend son apparence de pastille. */
-.nombre .terme.chiffre { background: var(--accent); color: var(--carte); text-decoration: none; cursor: pointer; }
-.nombre .terme.chiffre:hover, .nombre .terme.chiffre[aria-expanded="true"] { color: var(--carte); box-shadow: 0 0 0 3px var(--ligne); }
+.nombre .terme.chiffre { background: var(--pastille); color: var(--sur-pastille); text-decoration: none; cursor: pointer; }
+.nombre .terme.chiffre:hover, .nombre .terme.chiffre[aria-expanded="true"] { color: var(--sur-pastille); box-shadow: 0 0 0 3px var(--track), 0 0 0 4px var(--ink-muted); }
 .bulle-pied { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .2rem .8rem; }
 
-.recherche-fiches { display: flex; flex-direction: column; gap: .25rem; font-size: .8rem; color: var(--doux); margin-bottom: .8rem; }
+.recherche-fiches { display: flex; flex-direction: column; gap: .25rem; font-size: .8rem; color: var(--ink-muted); margin-bottom: .8rem; }
 .recherche-fiches input {
-  font: inherit; font-size: 1rem; padding: .45rem .6rem; border: 1px solid var(--ligne);
-  border-radius: 8px; background: var(--carte); color: var(--texte);
+  font: inherit; font-size: 1rem; padding: .45rem .6rem; border: 1px solid var(--ink-muted);
+  border-radius: var(--radius-sm); background: var(--surface); color: var(--ink);
 }
 .corps-fiches { display: flex; flex-direction: column; gap: .5rem; }
 .fiche {
-  background: var(--fond); border: 1px solid var(--ligne); border-radius: 12px;
-  padding: .7rem .9rem; scroll-margin-top: 1rem; transition: border-color .3s, box-shadow .3s;
+  background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4); scroll-margin-top: 1rem; transition: border-color .3s;
 }
-.fiche.ciblee { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.fiche.ciblee { border-color: var(--focus); outline: 2px solid var(--focus); outline-offset: 2px; }
 .fiche summary { cursor: pointer; display: flex; flex-wrap: wrap; gap: .1rem .6rem; align-items: baseline; }
-.fiche summary strong { color: var(--texte); }
-.fiche summary span { color: var(--doux); font-size: .88rem; }
-.fiche-corps { margin-top: .5rem; border-top: 1px solid var(--ligne); padding-top: .3rem; }
-.fiche-corps h4 { margin: .7rem 0 .1rem; font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; color: var(--doux); }
+.fiche summary strong { color: var(--ink); }
+.fiche summary span { color: var(--ink-muted); font-size: .88rem; }
+.fiche-corps { margin-top: .5rem; border-top: 1px solid var(--line); padding-top: .3rem; }
+.fiche-corps h4 { margin: var(--space-3) 0 0; font-size: 15px; line-height: 22px; font-weight: 500; letter-spacing: .04em; color: var(--ink-muted); }
 .fiche-corps p { margin: .2rem 0; font-size: .9rem; }
 .domaines-fiche { display: grid; grid-template-columns: max-content 1fr; gap: .25rem .8rem; margin: .3rem 0; font-size: .9rem; }
-.domaines-fiche dt { font-weight: 600; color: var(--accent); }
+.domaines-fiche dt { font-weight: 600; color: var(--glyph); }
 .domaines-fiche dd { margin: 0; }
 .liens-fiche .lien { padding: .2rem .1rem; margin-right: .4rem; }
 @media (max-width: 480px) {
   .domaines-fiche { grid-template-columns: 1fr; }
   .domaines-fiche dd { margin-bottom: .3rem; }
 }
+
+/* =====================================================================
+   Synthèse du jour — pleine largeur, en premier
+   ===================================================================== */
+.carte.synthese { grid-column: 1 / -1; position: relative; overflow: hidden; }
+.carte.synthese h2 { margin-bottom: var(--space-3); }
+.synthese-corps { position: relative; display: grid; grid-template-columns: 1fr auto auto; gap: var(--space-6); align-items: center; }
+.synthese-teinte p { margin: 0 0 var(--space-2); }
+.synthese-teinte .heading { margin-bottom: var(--space-3); }
+.synthese-nombre { display: flex; flex-direction: column; align-items: center; text-align: center; max-width: 16rem; }
+/* .terme remet la police par défaut (font: inherit) : on redonne ici le style numeral. */
+.synthese-nombre .numeral { font-size: 76px; line-height: 1; font-weight: 300; margin: var(--space-2) 0; text-decoration: none; cursor: pointer; color: var(--ink); }
+@media (max-width: 560px) { .synthese-nombre .numeral { font-size: 56px; } }
+.synthese-nombre .numeral:hover, .synthese-nombre .numeral[aria-expanded="true"] { color: var(--glyph); }
+.synthese-lune { display: flex; align-items: center; gap: var(--space-3); }
+.synthese-lune .disque { width: 56px; height: 56px; flex: none; }
+
+/* Barre de proportion : fond --track, partie remplie --accent. */
+.barre-proportion { height: 10px; border-radius: var(--radius-pill); background: var(--track); overflow: hidden; margin-bottom: var(--space-2); }
+.barre-proportion span { display: block; height: 100%; background: var(--accent); border-radius: var(--radius-pill); }
+
+/* Étoiles scintillantes : visibles seulement en sombre (--star = --surface en clair).
+   Elles ne captent pas les clics (pointer-events: none). */
+.etoiles { position: absolute; inset: 0; pointer-events: none; }
+.etoiles i { position: absolute; width: 2px; height: 2px; border-radius: 50%; background: var(--star); animation: scintiller 4s ease-in-out infinite; }
+@keyframes scintiller { 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .etoiles i { animation: none; } }
+
+/* Sur téléphone : une colonne, la Lune masquée (la carte « Ciel du moment » la montre déjà). */
+@media (max-width: 560px) {
+  .synthese-corps { grid-template-columns: 1fr; gap: var(--space-4); }
+  .synthese-nombre { align-items: flex-start; text-align: left; max-width: none; }
+  .synthese-lune { display: none; }
+}
+
+/* =====================================================================
+   Schémas du ciel (SVG) — couleurs = jetons, donc suivent le thème
+   ===================================================================== */
+.schema { display: block; width: 100%; max-width: 340px; height: auto; margin: 0 auto; overflow: visible; }
+.schema text { font-family: var(--police); text-anchor: middle; dominant-baseline: central; }
+.schema-trait { fill: none; stroke: var(--line); stroke-width: 1; }
+.schema-signe { fill: var(--glyph); font-size: 18px; }
+.schema-astre { fill: var(--ink); font-size: 26px; cursor: default; }
+.schema-repere { fill: var(--ink-muted); }
+.schema-lien { stroke: var(--ink-muted); stroke-width: .75; }
+.schema-orbite { fill: none; stroke: var(--line); stroke-width: 1.5; stroke-dasharray: 3 4; }
+.schema-soleil { fill: var(--sun); }
+.schema-planete { fill: var(--planet); }
+.schema-terre { fill: var(--earth); }
+#carte-helio + .caption { text-align: center; margin: var(--space-2) 0 0; }
+
+/* ---------- Grille sur téléphone : gouttière 16px ---------- */
+@media (max-width: 560px) {
+  .grille { gap: var(--space-4); }
+  .carte { padding: var(--space-4); }
+}
+
+/* ---------- Lecture croisée (src/croisee.js) ----------
+   Une correspondance par ligne, séparées par un filet pointillé comme les aspects.
+   La relation (écho, contraste…) est écrite en mot : pas de code couleur. */
+.correspondances { list-style: none; margin: 0; padding: 0; }
+.correspondances li { padding: var(--space-2) 0; border-bottom: 1px dotted var(--line); }
+.correspondances li:last-child { border-bottom: 0; }

@@ -412,6 +412,87 @@
   });
 
   // =====================================================================
+  //  SYNTHÈSE DU JOUR & SCHÉMAS
+  // =====================================================================
+
+  test('Synthèse', 'Addition du jour : même cascade que le jour universel', () => {
+    const N = T.numerologie;
+    const r = N.additionDuJour(jour(2026, 11, 15));
+    egal(r.texte, '2+0+2+6 = 10 → 1 · 1 + 11 = 12 → 3 · 3 + 15 = 18 → 9', 'texte :');
+    egal(r.valeur, 9, 'valeur :');
+    // 1990 → 2040, un jour sur trois : la valeur affichée = jourUniversel().
+    for (let t = jour(1990, 1, 1).getTime(); t < jour(2040, 1, 1).getTime(); t += 3 * 86400000) {
+      const d = new Date(t);
+      egal(N.additionDuJour(d).valeur, N.jourUniversel(d), d.toDateString() + ' :');
+    }
+  });
+
+  test('Synthèse', 'Teinte du jour : décompte des astres par élément', () => {
+    const A = T.astres;
+    const astre = (cle, lon, poids = 1) => ({ cle, poids, signe: A.signe(lon) });
+    // 3 en feu (Bélier, Lion, Sagittaire), 2 en eau, 1 en terre → feu, 3/6.
+    const t = A.teinteDuJour([astre('a', 5), astre('b', 125), astre('c', 245), astre('d', 95), astre('e', 215), astre('f', 35)]);
+    egal(t.element, 'feu', 'élément :');
+    egal(t.nombre, 3, 'nombre :');
+    egal(t.total, 6, 'total :');
+    // Égalité 1–1 : le poids départage (la Lune, poids 3, en eau).
+    egal(A.teinteDuJour([astre('a', 5, 1), astre('lune', 95, 3)]).element, 'eau', 'départage par le poids :');
+    // Sur une vraie date : la proportion reste entre 1/9 et 9/9.
+    const v = A.teinteDuJour(A.positions(jour(2026, 11, 15)));
+    vrai(v.nombre >= 3 && v.total === 9, 'au moins 3 astres sur 9 dans l’élément dominant (pigeonnier)');
+  });
+
+  test('Ciel', 'Longitudes héliocentriques : oppositions publiées (Terre et planète alignées)', () => {
+    const A = T.astres;
+    const helio = (d) => Object.fromEntries(A.positionsHeliocentriques(d).map((x) => [x.cle, x.lon]));
+    // À l'opposition, la planète et la Terre sont du même côté du Soleil : même longitude.
+    let h = helio(tu(2025, 1, 16)); proche(h.mars, h.terre, 1.5, 'Mars, opposition du 16/01/2025 :');
+    h = helio(tu(2026, 1, 10));     proche(h.jupiter, h.terre, 1.5, 'Jupiter, opposition du 10/01/2026 :');
+    h = helio(tu(2025, 9, 21));     proche(h.saturne, h.terre, 1.5, 'Saturne, opposition du 21/09/2025 :');
+    // La Terre vue du Soleil est à l'opposé du Soleil vu de la Terre.
+    const d = tu(2024, 3, 20, 3, 6);
+    proche(helio(d).terre, A.longitude('soleil', d) + 180, 0.001, 'Terre = Soleil + 180° :');
+  });
+
+  test('Schémas', 'Orientation : Bélier à gauche, sens inverse des aiguilles d’une montre', () => {
+    const S = T.schemas;
+    const p0 = S.pointSurCercle(100, 100, 50, 0), p90 = S.pointSurCercle(100, 100, 50, 90);
+    const p180 = S.pointSurCercle(100, 100, 50, 180), p270 = S.pointSurCercle(100, 100, 50, 270);
+    egal(p0.x, 50, '0° à gauche :');
+    egal(p90.y, 150, '90° en bas :');
+    egal(p180.x, 150, '180° à droite :');
+    egal(p270.y, 50, '270° en haut :');
+  });
+
+  test('Schémas', 'Carte géocentrique : 12 signes, astres proches décalés vers le centre', () => {
+    const S = T.schemas;
+    const c = S.carteGeocentrique([{ cle: 'a', lon: 10 }, { cle: 'b', lon: 15 }, { cle: 'c', lon: 20 }, { cle: 'd', lon: 200 }, { cle: 'e', lon: 359 }]);
+    egal(c.signes.length, 12, 'signes :');
+    const n = Object.fromEntries(c.astres.map((x) => [x.cle, x.niveau]));
+    egal(n.e, 1, 'niveau de e (359°, à 11° de a par-delà 0°) :');
+    egal(n.a, 0, 'niveau de a :');
+    egal(n.b, 1, 'niveau de b (à 5° de a) :');
+    egal(n.c, 2, 'niveau de c (à 5° de b, à 10° de a) :');
+    egal(n.d, 0, 'niveau de d (isolé) :');
+    // Aucun chevauchement sur un même niveau.
+    for (const x of c.astres) for (const y of c.astres) {
+      if (x !== y && x.niveau === y.niveau) vrai(S.ecartAngulaire(x.lon, y.lon) >= S.GEO.seuilProximite, `${x.cle} et ${y.cle} se chevauchent`);
+    }
+    const b = c.astres.find((x) => x.cle === 'b');
+    const rayon = Math.hypot(b.point.x - c.centre, b.point.y - c.centre);
+    vrai(Math.abs(rayon - (S.GEO.rayonAstres - S.GEO.recul)) < 0.2, 'b doit reculer de 28px');
+  });
+
+  test('Schémas', 'Carte héliocentrique : orbites régulières de 40px puis +25px', () => {
+    const S = T.schemas;
+    const h = S.carteHeliocentrique(T.astres.positionsHeliocentriques(jour(2026, 11, 15)));
+    egal(h.orbites.length, 8, 'orbites :');
+    egal(h.orbites[0].rayon, 40, 'Mercure :');
+    egal(h.orbites[7].rayon, 215, 'Neptune :');
+    egal(h.orbites[2].cle, 'terre', 'troisième orbite :');
+  });
+
+  // =====================================================================
   //  MÉTHODOLOGIE
   // =====================================================================
 
@@ -421,6 +502,8 @@
 
     const attendusNumero = ['pythagoricienne', 'reduction', 'cascade', 'semaineISO'];
     const attendusCiel = ['zodiaqueTropical', 'schlyter', 'kepler', 'perturbations', 'phases', 'dignites', 'transits'];
+    for (const id of ['correspondances', 'leconDuJour'])
+      vrai(M.donnees.croisee.sections[id] && M.donnees.croisee.sections[id].paragraphes.length, `section croisée « ${id} » manquante`);
 
     for (const id of attendusNumero) {
       const s = M.donnees.numerologie.sections[id];
@@ -458,6 +541,96 @@
       vrai(info.sectionMethodologie, `infobulle « ${cle} » sans sectionMethodologie`);
       vrai(M.trouver(info.sectionMethodologie) !== null, `cible « ${info.sectionMethodologie} » de l'infobulle « ${cle} » introuvable dans la méthodologie`);
     }
+  });
+
+  // =====================================================================
+  //  LECTURE CROISÉE & LEÇON DU JOUR (src/croisee.js)
+  // =====================================================================
+
+  test('Lecture croisée', 'Table de correspondances complète et cohérente avec les domiciles', () => {
+    const C = T.croisee, A = T.astres;
+    for (let n = 1; n <= 9; n++) {
+      const c = C.CORRESPONDANCES[n];
+      vrai(c, `nombre ${n} sans correspondance`);
+      vrai(A.ASTRES[c.planete], `planète « ${c.planete} » du ${n} inconnue`);
+      const signe = A.SIGNES.find((s) => s.nom === c.domicile);
+      vrai(signe, `domicile « ${c.domicile} » du ${n} inconnu`);
+      egal(signe.element, c.element, `élément du ${n} (domicile ${c.domicile}) :`);
+      vrai(T.glossaire[T.cleGlossaire(c.domicile)].maitres.includes(c.planete), `${c.planete} n'est pas maître de ${c.domicile}`);
+    }
+    egal(C.correspondance(11).planete, 'lune', '11 → racine 2 → Lune :');
+    egal(C.correspondance(22).planete, 'uranus', '22 → racine 4 → Uranus :');
+    egal(C.correspondance(33).planete, 'venus', '33 → racine 6 → Vénus :');
+  });
+
+  test('Lecture croisée', 'Relations entre éléments (écho, complices, contraste)', () => {
+    const r = T.croisee.relationElements;
+    egal(r('feu', 'feu'), 'echo', 'feu/feu');
+    egal(r('feu', 'air'), 'complices', 'feu/air');
+    egal(r('terre', 'eau'), 'complices', 'terre/eau');
+    egal(r('feu', 'eau'), 'contraste', 'feu/eau');
+    egal(r('air', 'terre'), 'contraste', 'air/terre');
+  });
+
+  test('Lecture croisée', '15/11/2026 : jour 9 ↔ Mars en Lion, teinte Feu, conjonction Jupiter', () => {
+    const L = T.croisee.lire(jour(2026, 11, 15), null, 'amour');
+    egal(L.nombre, 9, 'jour universel');
+    egal(L.source, 'universel', 'source');
+    egal(L.astre.signe.nom, 'Lion', 'Mars en');
+    egal(L.teinte.element, 'feu', 'teinte');
+    egal(L.correspondances.find((c) => c.type === 'teinte').relation, 'echo', 'relation nombre/teinte');
+    vrai(L.correspondances.some((c) => c.type === 'aspect' && c.texte.includes('conjonction avec Jupiter')), 'conjonction Mars–Jupiter absente');
+  });
+
+  test('Lecture croisée', 'Avec un profil, on croise le jour personnel', () => {
+    const d = jour(2026, 10, 28), n = jour(1990, 5, 15);
+    const L = T.croisee.lire(d, n, 'travail');
+    egal(L.source, 'personnel', 'source');
+    egal(L.nombre, T.numerologie.jourPersonnel(d, n), 'nombre');
+  });
+
+  test('Lecture croisée', 'Sur un an et 6 domaines : textes remplis et jamais répétés', () => {
+    const C = T.croisee;
+    for (let i = 0; i < 365; i += 5) {
+      const d = new Date(2026, 0, 1 + i, 12);
+      for (const dom of T.numerologie.DOMAINES) {
+        const L = C.lire(d, i % 2 ? jour(1990, 5, 15) : null, dom);
+        const phrases = [...L.correspondances.map((c) => c.texte), L.domaine.coteNombre, L.domaine.coteCiel, L.domaine.liaison];
+        for (const p of phrases) vrai(typeof p === 'string' && p.length > 10 && !p.includes('undefined'), `${d.toDateString()} ${dom} : phrase vide ou incomplète « ${p} »`);
+        egal(new Set(phrases).size, phrases.length, `${d.toDateString()} ${dom} : phrase répétée`);
+      }
+    }
+  });
+
+  test('Leçon du jour', 'Dates connues : lunaisons, station, maître-nombre (novembre 2026)', () => {
+    const C = T.croisee;
+    // Nouvelle lune 9 nov. 2026 07:02 TU, pleine lune 24 nov. 2026 14:53 TU.
+    egal(C.lecon(jour(2026, 11, 9)).type, 'lunaison', '9/11 (nouvelle lune) :');
+    vrai(C.lecon(jour(2026, 11, 9)).pourquoi.includes('nouvelle lune'), '9/11 : nouvelle lune attendue');
+    vrai(C.lecon(jour(2026, 11, 24)).pourquoi.includes('pleine lune'), '24/11 : pleine lune attendue');
+    // Mercure redevient direct le 13 nov. 2026.
+    const st = C.lecon(jour(2026, 11, 13));
+    egal(st.type, 'station', '13/11 (station de Mercure) :');
+    egal(st.propre.astre, 'mercure', 'astre de la station :');
+    // 19/11/2026 : 1 + 11 = 12 → 3 ; 3 + 19 = 22 (maître-nombre).
+    egal(C.lecon(jour(2026, 11, 19)).type, 'maitreNombre', '19/11 (jour 22) :');
+  });
+
+  test('Leçon du jour', 'Sur deux ans : une seule journée par lunaison, fiches et méthodes valides', () => {
+    const C = T.croisee, M = T.methodologie;
+    let lunaisons = 0, precedente = false;
+    for (let i = 0; i < 730; i++) {
+      const l = C.lecon(new Date(2026, 0, 1 + i, 12));
+      vrai(T.glossaire[l.cle], `jour ${i} : fiche « ${l.cle} » inconnue`);
+      vrai(M.trouver(l.methode), `jour ${i} : méthode « ${l.methode} » introuvable`);
+      vrai(l.texte && l.pourquoi, `jour ${i} : leçon vide`);
+      const estLunaison = l.type === 'lunaison';
+      vrai(!(estLunaison && precedente), `jour ${i} : deux jours de lunaison d'affilée`);
+      if (estLunaison) lunaisons++;
+      precedente = estLunaison;
+    }
+    // Environ 24,7 nouvelles + pleines lunes par an (lunaison de 29,53 j) → 49 en deux ans.
+    vrai(lunaisons >= 48 && lunaisons <= 50, `${lunaisons} lunaisons sur deux ans (attendu ≈ 49)`);
   });
 
   T.tests = { liste: tests };

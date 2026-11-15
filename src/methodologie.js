@@ -11,6 +11,7 @@
  * Structure :
  *   1. Numérologie : pythagoricienne, réduction, cascade, semaine ISO
  *   2. Ciel : zodiaque tropical, Schlyter, Kepler, perturbations, phases, dignités
+ *   3. Lecture croisée : table de correspondances, leçon du jour
  */
 (function (T) {
   'use strict';
@@ -145,10 +146,40 @@
           resume: 'La rencontre entre le ciel du jour et le thème de naissance : cycles de fond, déclencheurs et orbes resserrés.',
           formule: 'Écart angulaire = min(|lon_céleste − lon_natale|, 360° − |lon_céleste − lon_natale|)\nCondition d’activation : |Écart − Angle_aspect| ≤ Orbe (1° à 3°)',
           paragraphes: [
-            'Alors que la météo collective du « Ciel du moment » s’applique à tout le monde de façon identique, les transits personnels individualisent l’analyse astrologique. Un transit se produit lorsqu’une planète en mouvement dans le ciel actuel vient former un angle géométrique précis (conjonction, opposition, trigone, carré ou sextile) avec l’un des astres immobiles de votre thème natal.',
+            'Alors que la météo collective du « Ciel du moment » s’applique à tout le monde de façon identique, les transits personnels individualisent l’analyse astrologique. Un transit se produit lorsqu’une planète en mouvement dans le ciel actuel vient former un angle géométrique précis (conjonction, opposition, trigone, carré ou sextile) avec l’un des astres immobiles de ton thème natal.',
             'Pourquoi distinguer les planètes lentes des planètes rapides ?\nLa vitesse de déplacement des corps célestes détermine la portée temporelle et l’intensité du transit. La Lune traverse un aspect en quelques heures (humeur ou résonance émotionnelle fugace), le Soleil, Mercure et Vénus en 2 à 3 jours (événements ou sensations éphémères), et Mars en une à deux semaines (impulsion d’action ou poussée d’énergie). À l’inverse, les planètes lentes — Jupiter (cycle de 12 ans), Saturne (29,5 ans), Uranus (84 ans) et Neptune (165 ans) — stationnent plusieurs semaines ou plusieurs mois sur un même degré (notamment lors de leurs phases rétrogrades). Leurs transits structurent les grandes transitions de vie, les apprentissages profonds et les tournants majeurs d’évolution personnelle. C’est pourquoi Toiles les affiche en priorité absolue.',
             'Pourquoi des orbes resserrés (1° à 3°) ?\nDans l’analyse d’un thème natal isolé ou d’un ciel collectif, la tradition astrologique tolère des orbes larges allant jusqu’à 7° ou 8°. Mais pour l’étude des transits quotidiens, un tel orbe saturerait l’affichage de dizaines d’aspects lointains actifs en permanence, occultant l’essentiel. Toiles applique une règle stricte d’orbes resserrés (3° pour la conjonction et l’opposition, 2,5° pour le carré et le trigone, 2° pour le sextile). Un transit n’apparaît que lorsqu’il entre dans sa phase de réelle résonance opérative, culminant lors de son exactitude (orbe proche de 0°).',
-            'La convention de midi TU et la détection du signe lunaire :\nL’heure exacte de naissance n’étant pas toujours connue de mémoire, Toiles calcule le thème natal de référence à 12h00 Temps Universel (midi TU). Cette convention mathématique standardise le calcul et minimise l’erreur angulaire maximale sur la journée (±12 heures). Pour le Soleil et toutes les planètes, le déplacement sur une demi-journée est minime (< 0,5°) et ne change presque jamais leur signe zodiacal. En revanche, la Lune parcourt environ 13° par jour : elle change de signe environ une fois tous les deux jours et demi. Si la Lune franchit la frontière entre deux signes au cours de votre journée de naissance (entre 0h et 24h TU), Toiles affiche automatiquement un avertissement pour vous informer que son signe natal exact reste dépendant de votre heure de naissance.'
+            'La convention de midi TU et la détection du signe lunaire :\nL’heure exacte de naissance n’étant pas toujours connue de mémoire, Toiles calcule le thème natal de référence à 12h00 Temps Universel (midi TU). Cette convention mathématique standardise le calcul et minimise l’erreur angulaire maximale sur la journée (±12 heures). Pour le Soleil et toutes les planètes, le déplacement sur une demi-journée est minime (< 0,5°) et ne change presque jamais leur signe zodiacal. En revanche, la Lune parcourt environ 13° par jour : elle change de signe environ une fois tous les deux jours et demi. Si la Lune franchit la frontière entre deux signes au cours de ta journée de naissance (entre 0h et 24h TU), Toiles affiche automatiquement un avertissement pour te signaler que son signe natal exact reste dépendant de ton heure de naissance.'
+          ],
+        },
+      },
+    },
+    croisee: {
+      id: 'croisee',
+      titre: 'Lecture croisée',
+      description: 'Comment Toiles relie les nombres et le ciel, et comment il choisit la leçon du jour.',
+      sections: {
+        correspondances: {
+          id: 'correspondances',
+          titre: 'La table nombre ↔ planète ↔ élément',
+          resume: 'Un pont entre deux traditions : chaque nombre de 1 à 9 est relié à une planète, et par elle à un élément.',
+          formule: '1 Soleil (Feu) · 2 Lune (Eau) · 3 Jupiter (Feu) · 4 Uranus (Air) · 5 Mercure (Air)\n6 Vénus (Terre) · 7 Neptune (Eau) · 8 Saturne (Terre) · 9 Mars (Feu)\nMaîtres-nombres : 11 → 2, 22 → 4, 33 → 6 (planète de la racine)\nÉlément du nombre = élément du domicile de sa planète',
+          paragraphes: [
+            'Numérologie et astrologie sont deux systèmes nés séparément. Il n’existe pas de table officielle qui les relie : chaque auteur propose la sienne. Toiles retient la plus répandue dans les manuels de numérologie occidentale moderne (dans la lignée de Cheiro, début du XXe siècle), en remplaçant les nœuds lunaires, que Toiles ne calcule pas encore, par Uranus et Neptune, déjà admis par beaucoup d’auteurs pour le 4 et le 7.',
+            'Pourquoi un élément ? Pour avoir une base de comparaison simple avec le ciel du jour. On prend l’élément du domicile de la planète : le Soleil gouverne le Lion (Feu), donc le 1 est un nombre de Feu. Mercure et Vénus ont deux domiciles ; on garde le premier dans l’ordre du zodiaque (Gémeaux, Taureau). C’est une convention de Toiles, assumée comme telle.',
+            'Les éléments se comparent selon la règle astrologique classique : même élément = écho ; Feu et Air (actifs) ou Terre et Eau (réceptifs) = complices ; actif face à réceptif = contraste. Un contraste n’est pas « mauvais » : il signale deux manières d’avancer à concilier.',
+            'La lecture croisée liste ces correspondances une par une (la planète du nombre et son signe du jour, l’élément du nombre face à la teinte du ciel, les aspects serrés que reçoit la planète), puis relie le domaine choisi avec trois phrases de sources différentes. Elle ne calcule volontairement aucune note globale : le but est de comprendre les liens, pas d’obtenir un score.'
+          ],
+        },
+        leconDuJour: {
+          id: 'leconDuJour',
+          titre: 'La leçon du jour',
+          resume: 'Une notion par jour, choisie parce qu’elle est visible dans le ciel ou les nombres de la date.',
+          formule: 'Priorité (du plus rare au plus courant) :\n  1. Nouvelle ou pleine lune (élongation à moins de 6,5° de 0° ou 180°)\n  2. Station : une planète change de sens entre la veille et le lendemain\n  3. Jour universel = maître-nombre (11, 22, 33)\n  4. Aspect exact entre deux planètes (écart < 0,5°, Lune exclue)\n  5. Mercure, Vénus ou Mars rétrograde\n  6. Sinon : une notion de base, selon le jour de l’année',
+          paragraphes: [
+            'On apprend mieux une notion quand on peut la voir à l’œuvre. La leçon du jour cherche donc d’abord l’événement le plus rare de la date : une lunaison n’arrive que deux fois par mois, une station quelques fois par an.',
+            'Pourquoi 6,5° pour les lunaisons ? La Lune gagne environ 12° par jour sur le Soleil : une fenêtre de ±6,5° autour de l’exact désigne le jour civil où la lunaison a lieu, sans en garder deux.',
+            'Le texte affiché est celui de la fiche du glossaire correspondante : la leçon ne réécrit rien, elle choisit quoi montrer. Le lien « Fiche complète » mène à la fiche, « En savoir plus » à la méthode.'
           ],
         },
       },
@@ -168,11 +199,10 @@
     if (cle === 'aspects') cle = 'ciel';
 
     if (METHODOLOGIE[cle]) return { type: 'domaine', ...METHODOLOGIE[cle] };
-    if (METHODOLOGIE.numerologie.sections[cle]) {
-      return { type: 'section', domaine: 'numerologie', ...METHODOLOGIE.numerologie.sections[cle] };
-    }
-    if (METHODOLOGIE.ciel.sections[cle]) {
-      return { type: 'section', domaine: 'ciel', ...METHODOLOGIE.ciel.sections[cle] };
+    // On cherche la section dans chaque domaine (numerologie, ciel, croisee).
+    for (const domaine in METHODOLOGIE) {
+      const section = METHODOLOGIE[domaine].sections[cle];
+      if (section) return { type: 'section', domaine, ...section };
     }
     return null;
   }

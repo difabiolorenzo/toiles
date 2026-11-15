@@ -243,7 +243,30 @@
     return { valeur: r.valeur, etapes: [...mois.etapes, ...r.etapes] };
   }
 
+  /**
+   * Version courte du calcul du jour universel, pour l'afficher sous le nombre :
+   *   "2+0+2+6 = 10 → 1 · 1 + 11 = 12 → 3 · 3 + 15 = 18 → 9"
+   * (année réduite · + mois · + jour). On suit la MÊME cascade que
+   * jourUniversel(), et pas la somme de tous les chiffres de la date :
+   * les deux diffèrent quand un maître-nombre apparaît en chemin.
+   */
+  function additionDuJour(date) {
+    const fleche = (total, valeur) => (total === valeur ? `${total}` : `${total} → ${valeur}`);
+    const annee = date.getFullYear();
+    const au = reduire(sommeChiffres(annee));
+    const mois = date.getMonth() + 1, jourDuMois = date.getDate();
+    const mu = reduire(au + mois);
+    const ju = reduire(mu + jourDuMois);
+    return {
+      valeur: ju,
+      texte: `${addition(annee)} = ${fleche(sommeChiffres(annee), au)}` +
+        ` · ${au} + ${mois} = ${fleche(au + mois, mu)}` +
+        ` · ${mu} + ${jourDuMois} = ${fleche(mu + jourDuMois, ju)}`,
+    };
+  }
+
   T.numerologie = {
+    additionDuJour,
     reduire, sommeChiffres, semaineISO, reduireAvecEtapes, expliquer,
     anneeUniverselle, moisUniversel, semaineUniverselle, jourUniversel,
     anneePersonnelle, moisPersonnel, semainePersonnelle, jourPersonnel,

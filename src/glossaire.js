@@ -265,14 +265,14 @@
       categorie: 'notion',
       titre: 'Transit planétaire',
       court: 'Le passage d’une planète en mouvement dans le ciel actuel sur une position du thème natal.',
-      detail: 'Le transit révèle comment la météo collective du jour résonne intimement avec votre potentiel de naissance. Les planètes lentes (Jupiter à Neptune) marquent les cycles majeurs ; les rapides et la Lune apportent des touches ponctuelles.',
+      detail: 'Le transit révèle comment la météo collective du jour résonne intimement avec ton potentiel de naissance. Les planètes lentes (Jupiter à Neptune) marquent les cycles majeurs ; les rapides et la Lune apportent des touches ponctuelles.',
       motsCles: ['activation', 'résonance', 'cycles', 'évolution'],
     },
     themeNatal: {
       categorie: 'notion',
       titre: 'Thème natal',
-      court: 'La carte du ciel au moment précis de votre naissance.',
-      detail: 'Il représente votre potentiel de départ, vos ressources et vos apprentissages de fond. C’est la référence fixe sur laquelle viennent résonner les transits quotidiens.',
+      court: 'La carte du ciel au moment précis de ta naissance.',
+      detail: 'Il représente ton potentiel de départ, tes ressources et tes apprentissages de fond. C’est la référence fixe sur laquelle viennent résonner les transits quotidiens.',
       motsCles: ['carte de naissance', 'potentiel', 'fondation'],
     },
 

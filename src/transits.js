@@ -161,7 +161,7 @@
 
     return [
       `${A.ASTRES[c.cle].nom} céleste (dans le ciel aujourd’hui) est à ${f1(c.lon)}° (${f1(c.signe.degre)}° en ${c.signe.nom})${c.retrograde ? ' ℞ rétrograde' : ''}.`,
-      `${A.ASTRES[n.cle].nom} natal (à votre naissance) est à ${f1(n.lon)}° (${f1(n.signe.degre)}° en ${n.signe.nom}).`,
+      `${A.ASTRES[n.cle].nom} natal (à ta naissance) est à ${f1(n.lon)}° (${f1(n.signe.degre)}° en ${n.signe.nom}).`,
       `Écart sur le zodiaque : |${f1(c.lon)} − ${f1(n.lon)}| = ${f1(brut)}°` +
         (brut > 180 ? ` ; plus court chemin : 360 − ${f1(brut)} = ${f1(sep)}°.` : '.'),
       `Aspect visé : ${t.nom.toLowerCase()} (${t.angle}°) → écart à l’exact : |${f1(sep)} − ${t.angle}| = ${f1(t.ecart)}°.`,

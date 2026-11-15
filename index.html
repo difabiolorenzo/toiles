@@ -4,12 +4,34 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Toiles</title>
+  <!-- Icône d'onglet : le logo « étoile tissée » (images/logo.svg). -->
+  <link rel="icon" href="images/logo.svg" type="image/svg+xml">
   <link rel="stylesheet" href="src/toiles.css">
+  <!-- Chargé tôt : applique un thème forcé avant l'affichage (pas de flash). -->
+  <script src="src/theme.js"></script>
 </head>
 <body>
+  <div class="entete-outils">
+    <!-- Icône et libellé (aria-label, title) posés par src/theme.js : ils disent ce que le clic va faire. -->
+    <button type="button" class="bouton-pilule bouton-icone" id="bouton-theme" aria-label="Changer de thème">◐</button>
+  </div>
   <header class="entete">
-    <h1>Toiles</h1>
-    <p>Numérologie et dynamiques célestes</p>
+    <h1 class="title titre-logo">
+      <!-- Logo « L'étoile tissée » : trois fils croisés, cœur évidé, point d'accent.
+           Dessiné ici (et non chargé depuis images/logo.svg) pour suivre les jetons
+           de couleur et le bouton de thème. -->
+      <svg class="logo" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+        <g stroke="currentColor" stroke-width="4" stroke-linecap="round">
+          <line x1="32" y1="6" x2="32" y2="58"/>
+          <line x1="9.5" y1="19" x2="54.5" y2="45"/>
+          <line x1="9.5" y1="45" x2="54.5" y2="19"/>
+        </g>
+        <circle class="logo-coeur" cx="32" cy="32" r="8"/>
+        <circle class="logo-point" cx="32" cy="32" r="4"/>
+      </svg>
+      Toiles
+    </h1>
+    <p class="label">Numérologie et dynamiques célestes</p>
     <div class="entete-liens">
       <button type="button" class="lien" id="ouvrir-methodologie">Méthodologie &amp; Pédagogie</button>
       <button type="button" class="lien" id="ouvrir-fiches">Fiches glossaire</button>
@@ -34,11 +56,28 @@
       <label><input type="radio" name="vue" value="numerologie"> Numérologie</label>
       <label><input type="radio" name="vue" value="ciel"> Ciel</label>
       <label><input type="radio" name="vue" value="transits"> Transits</label>
+      <label><input type="radio" name="vue" value="croisee"> Croisée</label>
     </fieldset>
   </form>
 
   <!-- data-module : sert au filtre. data-info : clé de l'infobulle dans src/textes.js -->
   <main class="grille">
+    <!-- Synthèse du jour : toujours en premier, sur toute la largeur. -->
+    <section class="carte synthese" data-module="synthese" aria-labelledby="titre-synthese">
+      <div class="etoiles" id="etoiles" aria-hidden="true"></div>
+      <h2 class="label" id="titre-synthese">Synthèse du jour <button type="button" class="info" data-info="synthese" aria-label="Comment ça marche ?">?</button></h2>
+      <div class="synthese-corps" id="synthese"></div>
+    </section>
+    <!-- Leçon du jour : une notion choisie parce qu'elle se voit dans la date (src/croisee.js). -->
+    <section class="carte" data-module="croisee">
+      <h2>Leçon du jour <button type="button" class="info" data-info="lecon" aria-label="Comment ça marche ?">?</button></h2>
+      <div id="lecon"></div>
+    </section>
+    <!-- Lecture croisée : correspondances nombre ↔ planète ↔ élément, expliquées une à une. -->
+    <section class="carte" data-module="croisee">
+      <h2>Lecture croisée <button type="button" class="info" data-info="croisee" aria-label="Comment ça marche ?">?</button></h2>
+      <div id="croisee"></div>
+    </section>
     <section class="carte" data-module="numerologie">
       <h2>Numérologie <button type="button" class="info" data-info="numerologie" aria-label="Comment ça marche ?">?</button></h2>
       <div id="numero"></div>
@@ -47,6 +86,15 @@
       <h2>Ciel du moment <button type="button" class="info" data-info="ciel" aria-label="Comment ça marche ?">?</button></h2>
       <div id="lune" class="lune"></div>
       <table class="astres" id="astres"></table>
+    </section>
+    <section class="carte" data-module="ciel">
+      <h2>Le ciel vu de la Terre <button type="button" class="info" data-info="geocentrique" aria-label="Comment ça marche ?">?</button></h2>
+      <div id="carte-geo"></div>
+    </section>
+    <section class="carte" data-module="ciel">
+      <h2>Le système solaire <button type="button" class="info" data-info="heliocentrique" aria-label="Comment ça marche ?">?</button></h2>
+      <div id="carte-helio"></div>
+      <p class="caption">Distances non à l’échelle : seuls les angles sont justes.</p>
     </section>
     <section class="carte" data-module="ciel">
       <h2>Dynamique des énergies <button type="button" class="info" data-info="dynamique" aria-label="Comment ça marche ?">?</button></h2>
@@ -96,6 +144,7 @@
     <div class="panneau-onglets" id="onglets-methodologie" role="tablist">
       <button type="button" class="onglet actif" data-onglet="numerologie" role="tab" aria-selected="true">Numérologie</button>
       <button type="button" class="onglet" data-onglet="ciel" role="tab" aria-selected="false">Ciel &amp; Dynamiques</button>
+      <button type="button" class="onglet" data-onglet="croisee" role="tab" aria-selected="false">Lecture croisée</button>
     </div>
     <p class="panneau-intro" id="intro-methodologie"></p>
     <div class="corps-methodologie" id="corps-methodologie"></div>
@@ -121,6 +170,7 @@
   <!-- Scripts classiques (pas de modules ES) pour que le double-clic fonctionne. L'ordre compte. -->
   <script src="src/numerologie.js"></script>
   <script src="src/astres.js"></script>
+  <script src="src/schemas.js"></script>
   <script src="src/transits.js"></script>
   <script src="src/textes.js"></script>
   <script src="src/glossaire.js"></script>
@@ -128,6 +178,7 @@
   <script src="src/fiches.js"></script>
   <script src="src/profils.js"></script>
   <script src="src/methodologie.js"></script>
+  <script src="src/croisee.js"></script>
   <script src="src/app.js"></script>
 </body>
 </html>

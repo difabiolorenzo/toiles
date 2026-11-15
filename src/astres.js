@@ -85,6 +85,36 @@
   }
 
   /**
+   * Correction de la « Grande Inégalité » Jupiter–Saturne (en degrés), à ajouter
+   * à leur longitude héliocentrique. Vaut 0 pour les autres planètes.
+   * (Explication détaillée : point 4 du commentaire de longitude() ci-dessous.)
+   */
+  function perturbationJupiterSaturne(nom, d) {
+    if (nom !== 'jupiter' && nom !== 'saturne') return 0;
+    const Mj = norm(ELEMENTS.jupiter(d).M), Msa = norm(ELEMENTS.saturne(d).M);
+    return nom === 'jupiter'
+      ? -0.332 * sin(2 * Mj - 5 * Msa - 67.6) - 0.056 * sin(2 * Mj - 2 * Msa + 21) + 0.042 * sin(3 * Mj - 5 * Msa + 21) -
+        0.036 * sin(Mj - 2 * Msa) + 0.022 * cos(Mj - Msa) + 0.023 * sin(2 * Mj - 3 * Msa + 52) - 0.016 * sin(Mj - 5 * Msa - 69)
+      : 0.812 * sin(2 * Mj - 5 * Msa - 67.6) - 0.229 * cos(2 * Mj - 4 * Msa - 2) + 0.119 * sin(Mj - 2 * Msa - 3) +
+        0.046 * sin(2 * Mj - 6 * Msa - 69) + 0.014 * sin(Mj - 3 * Msa + 32);
+  }
+
+  /**
+   * Position héliocentrique (vue depuis le Soleil) d'une planète → { lon, lat, r }.
+   * Cas particulier : la Terre. Schlyter ne donne pas son orbite, mais celle
+   * du Soleil vu de la Terre ; la Terre vue du Soleil est simplement à l'opposé (+180°).
+   */
+  function positionHeliocentrique(nom, d) {
+    if (nom === 'terre') {
+      const sol = positionOrbitale(ELEMENTS.soleil(d));
+      return { lon: norm(sol.lon + 180), lat: 0, r: sol.r };
+    }
+    const h = positionOrbitale(ELEMENTS[nom](d));
+    h.lon = norm(h.lon + perturbationJupiterSaturne(nom, d));
+    return h;
+  }
+
+  /**
    * Longitude écliptique géocentrique (en degrés, 0° à 360°) d'un astre à l'instant d.
    *
    * Pourquoi la méthode de Paul Schlyter et ces perturbations ?
@@ -157,16 +187,7 @@
       return norm(p.lon + pert);
     }
 
-    const el = ELEMENTS[nom](d);
-    const h = positionOrbitale(el);
-    if (nom === 'jupiter' || nom === 'saturne') {
-      const Mj = norm(ELEMENTS.jupiter(d).M), Msa = norm(ELEMENTS.saturne(d).M);
-      h.lon += nom === 'jupiter'
-        ? -0.332 * sin(2 * Mj - 5 * Msa - 67.6) - 0.056 * sin(2 * Mj - 2 * Msa + 21) + 0.042 * sin(3 * Mj - 5 * Msa + 21) -
-          0.036 * sin(Mj - 2 * Msa) + 0.022 * cos(Mj - Msa) + 0.023 * sin(2 * Mj - 3 * Msa + 52) - 0.016 * sin(Mj - 5 * Msa - 69)
-        : 0.812 * sin(2 * Mj - 5 * Msa - 67.6) - 0.229 * cos(2 * Mj - 4 * Msa - 2) + 0.119 * sin(Mj - 2 * Msa - 3) +
-          0.046 * sin(2 * Mj - 6 * Msa - 69) + 0.014 * sin(Mj - 3 * Msa + 32);
-    }
+    const h = positionHeliocentrique(nom, d);
     // héliocentrique → géocentrique (on ajoute la position du Soleil vue de la Terre)
     const xg = h.r * cos(h.lat) * cos(h.lon) + sol.r * cos(sol.lon);
     const yg = h.r * cos(h.lat) * sin(h.lon) + sol.r * sin(sol.lon);
@@ -304,6 +325,45 @@
     };
   }
 
+  // ---------- Teinte du jour ----------
+  /**
+   * La « teinte » du jour = l'élément (feu, terre, air, eau) où se trouvent
+   * le PLUS d'astres. Contrairement à dynamique().elements, chaque astre compte
+   * pour 1 (pas de poids) : c'est un simple décompte, facile à vérifier
+   * en regardant la table des positions.
+   * En cas d'égalité, on départage avec la répartition pondérée (Soleil et Lune
+   * comptent plus), puis par l'ordre du zodiaque (feu, terre, air, eau).
+   * Renvoie { element, nombre, total, proportion }.
+   */
+  function teinteDuJour(pos) {
+    const ORDRE = ['feu', 'terre', 'air', 'eau'];
+    const compte = { feu: 0, terre: 0, air: 0, eau: 0 };
+    const poids = { feu: 0, terre: 0, air: 0, eau: 0 };
+    for (const p of pos) {
+      compte[p.signe.element] += 1;
+      poids[p.signe.element] += p.poids || 1;
+    }
+    const element = ORDRE.slice().sort((a, b) =>
+      (compte[b] - compte[a]) || (poids[b] - poids[a]) || (ORDRE.indexOf(a) - ORDRE.indexOf(b)))[0];
+    return { element, nombre: compte[element], total: pos.length, proportion: compte[element] / pos.length };
+  }
+
+  // ---------- Vue héliocentrique ----------
+  /** Les planètes du schéma héliocentrique, du Soleil vers l'extérieur. */
+  const PLANETES_HELIO = ['mercure', 'venus', 'terre', 'mars', 'jupiter', 'saturne', 'uranus', 'neptune'];
+
+  /**
+   * Longitudes héliocentriques du jour (vues du Soleil), pour le schéma
+   * du système solaire. Renvoie [{ cle, lon, r }] dans l'ordre de PLANETES_HELIO.
+   */
+  function positionsHeliocentriques(date) {
+    const d = jourSchlyter(date);
+    return PLANETES_HELIO.map((cle) => {
+      const h = positionHeliocentrique(cle, d);
+      return { cle, lon: h.lon, r: h.r };
+    });
+  }
+
   // ---------- Calcul détaillé (pour apprendre) ----------
   //
   // Même principe que expliquer() en numérologie : refaire le chemin du résultat
@@ -431,6 +491,7 @@
     expliquerPosition, expliquerAspect,
     jourJulien, longitude: (nom, date) => longitude(nom, jourSchlyter(date)),
     signe, positions, phaseLunaire, aspects, dynamique,
+    teinteDuJour, positionsHeliocentriques, PLANETES_HELIO,
     themeNatal,
     SIGNES, ASTRES, ASPECTS, PHASES,
   };

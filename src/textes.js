@@ -15,7 +15,36 @@
   'use strict';
 
   T.textes = {
+    /* Tendance associée à la teinte du jour (élément dominant), pour la Synthèse.
+       Un seul mot : on écrit « tendance : … », jamais une prédiction. */
+    tendances: {
+      feu: 'élan',
+      terre: 'concret',
+      air: 'échanges',
+      eau: 'intériorité',
+    },
     infobulles: {
+      synthese: {
+        titre: 'Synthèse du jour',
+        principe: 'Un résumé de la journée en un coup d’œil : sa teinte (l’élément qui rassemble le plus d’astres), le nombre du jour et la phase de la Lune.',
+        base: 'Teinte : on compte les 9 astres par élément (Feu, Terre, Air, Eau), chacun pour 1 ; la barre montre cette proportion. Nombre : le jour universel, avec sa cascade année → mois → jour écrite en petit.',
+        limites: 'C’est un résumé : il ne remplace pas le détail des cartes en dessous. La tendance est un mot-clé de l’élément, pas une prévision.',
+        sectionMethodologie: 'ciel',
+      },
+      geocentrique: {
+        titre: 'Le ciel vu de la Terre',
+        principe: 'Le schéma montre où se trouve chaque astre dans le zodiaque, tel qu’on le verrait depuis la Terre, placée au centre.',
+        base: 'Chaque point est posé à sa vraie longitude du jour. Bélier (0°) à gauche, puis les signes dans le sens inverse des aiguilles d’une montre, comme sur un thème astral.',
+        limites: 'Quand deux astres sont à moins de 12° l’un de l’autre, le second est dessiné plus près du centre pour rester lisible ; un trait fin le relie à son degré exact.',
+        sectionMethodologie: 'zodiaqueTropical',
+      },
+      heliocentrique: {
+        titre: 'Le système solaire',
+        principe: 'Le même instant vu de dessus, depuis le Soleil : on voit les planètes tourner sur leurs orbites, et la Terre parmi elles.',
+        base: 'Longitudes héliocentriques calculées avec les mêmes orbites (méthode de Paul Schlyter). Quand une planète extérieure est alignée avec la Terre du même côté du Soleil, elle est à l’opposition.',
+        limites: 'Les distances ne sont pas à l’échelle : les orbites sont espacées régulièrement, sinon Neptune sortirait de l’écran. Seuls les angles sont justes.',
+        sectionMethodologie: 'kepler',
+      },
       numerologie: {
         titre: 'Numérologie',
         principe: 'Chaque période porte un nombre de 1 à 9 (ou 11, 22, 33). Les nombres universels valent pour tout le monde ; les nombres personnels ajoutent ta date de naissance.',
@@ -46,10 +75,24 @@
       },
       transits: {
         titre: 'Transits personnels',
-        principe: 'Les transits comparent la position actuelle des planètes dans le ciel avec celles de votre thème natal. Ils révèlent comment la météo collective du jour résonne intimement avec votre sensibilité propre.',
+        principe: 'Les transits comparent la position actuelle des planètes dans le ciel avec celles de ton thème natal. Ils montrent comment la météo collective du jour peut résonner avec ta sensibilité propre.',
         base: 'Aspects majeurs (conjonction, opposition, trigone, carré, sextile) entre planètes célestes et planètes natales. Orbes resserrés (1° à 3°) pour isoler les configurations réellement actives.',
         limites: 'Les planètes lentes (Jupiter à Neptune) marquent les grandes transformations sur plusieurs semaines ou mois. Les planètes rapides et la Lune apportent des déclencheurs ponctuels d’un à deux jours. Sans heure de naissance exacte, la position de la Lune natale reste indicative.',
         sectionMethodologie: 'transits',
+      },
+      croisee: {
+        titre: 'Lecture croisée',
+        principe: 'Faire dialoguer les deux langages : le nombre du jour est relié à une planète et à un élément, puis on regarde où se trouve cette planète aujourd’hui.',
+        base: 'Table nombre ↔ planète la plus répandue (1 Soleil, 2 Lune, 3 Jupiter, 4 Uranus, 5 Mercure, 6 Vénus, 7 Neptune, 8 Saturne, 9 Mars) ; l’élément du nombre est celui du domicile de sa planète. Avec un profil, on croise le jour personnel.',
+        limites: 'Les correspondances varient selon les écoles : celle-ci est un choix de Toiles. On liste des échos et des contrastes expliqués, jamais une note globale.',
+        sectionMethodologie: 'correspondances',
+      },
+      lecon: {
+        titre: 'Leçon du jour',
+        principe: 'Chaque jour, une notion à apprendre, choisie parce qu’elle se voit dans le ciel ou les nombres de la date.',
+        base: 'Priorité au plus rare : nouvelle ou pleine lune, planète qui change de sens, maître-nombre, aspect exact (< 0,5°), rétrogradation de Mercure, Vénus ou Mars ; sinon une notion de base qui tourne.',
+        limites: 'Le texte vient des fiches du glossaire : la leçon choisit, elle ne réécrit pas. Les jours calmes, c’est une révision.',
+        sectionMethodologie: 'leconDuJour',
       },
     },
   };
