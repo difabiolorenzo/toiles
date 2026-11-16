@@ -6,6 +6,12 @@
   <title>Toiles</title>
   <!-- Icône d'onglet : le logo « étoile tissée » (images/logo.svg). -->
   <link rel="icon" href="images/logo.svg" type="image/svg+xml">
+  <!-- Installation en application (PWA) : manifeste, icône iOS, couleur de barre.
+       Effectif seulement en ligne (GitHub Pages) ; sans effet en double-clic. -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="images/icones/icone-180.png">
+  <meta name="theme-color" content="#efe4cc" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#080b1f" media="(prefers-color-scheme: dark)">
   <link rel="stylesheet" href="src/toiles.css">
   <!-- Chargé tôt : applique un thème forcé avant l'affichage (pas de flash). -->
   <script src="src/theme.js"></script>
@@ -271,5 +277,15 @@
   <script src="src/journal.js"></script>
   <script src="src/quiz.js"></script>
   <script src="src/app.js"></script>
+  <script>
+    // Service worker (sw.js) : rend Toiles installable et disponible hors ligne.
+    // Les navigateurs le refusent en file:// (double-clic) : on ne l'enregistre donc
+    // qu'en http(s), et une erreur éventuelle n'empêche jamais l'application de marcher.
+    if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+      navigator.serviceWorker.register('sw.js').catch(function (erreur) {
+        console.warn('Service worker non enregistré :', erreur);
+      });
+    }
+  </script>
 </body>
 </html>

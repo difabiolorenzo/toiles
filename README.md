@@ -137,4 +137,6 @@ Ce qui rend cela possible sans adaptation :
 - Une page GitHub Pages est **publique** : n'y mets pas de données personnelles dans le code (les profils, eux, ne quittent jamais le navigateur).
 - `tests/index.html` est aussi publié : pratique pour vérifier la version en ligne.
 
+**Installer Toiles comme une application (PWA)** : en ligne seulement. Sur ordinateur (Chrome, Edge), cliquer sur l'icône d'installation dans la barre d'adresse. Sur Android, ouvrir le menu ⋮ puis *Installer l'application*. Sur iPhone (Safari), toucher *Partager* puis *Sur l'écran d'accueil*. L'application s'ouvre alors dans sa propre fenêtre et fonctionne hors ligne. Les fichiers en jeu sont `manifest.webmanifest`, `sw.js` et `images/icones/`. Si tu ajoutes un fichier à l'application, ajoute-le aussi à la liste `FICHIERS` de `sw.js` et augmente `VERSION`.
+
 **Convention à connaître** : la « semaine » numérologique n'a pas de règle standard. Toiles utilise *mois + n° de semaine ISO*.
