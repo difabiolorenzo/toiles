@@ -11,7 +11,8 @@
  * Structure :
  *   1. Numérologie : pythagoricienne, réduction, cascade, semaine ISO
  *   2. Ciel : zodiaque tropical, Schlyter, Kepler, perturbations, phases, dignités
- *   3. Lecture croisée : table de correspondances, leçon du jour
+ *   3. Ascendant & maisons : heure légale → TU, temps sidéral, angles, Placidus, domaines
+ *   4. Lecture croisée : table de correspondances, leçon du jour
  */
 (function (T) {
   'use strict';
@@ -64,6 +65,30 @@
             'Contrairement à l’année (cycle solaire), au mois (cycle des saisons) et au jour (cycle terrestre circadien), la semaine de 7 jours ne correspond à aucun cycle astronomique direct exact. La tradition numérologique classique ne propose ainsi aucune règle universellement admise pour déterminer le nombre d’une semaine.',
             'Certains praticiens ignorent la semaine, d’autres additionnent directement le jour au mois, d’autres encore découpent arbitrairement l’année en 52 tranches. Pour apporter une réponse rigoureuse, transparente et vérifiable, Toiles adopte une convention claire : insérer le numéro de semaine civil international (norme ISO 8601) au cœur de la cascade mensuelle.',
             'La norme internationale ISO 8601 définit la semaine comme débutant le lundi. La semaine 1 d’une année est celle qui contient le premier jeudi de janvier (soit au moins quatre jours de la nouvelle année). En réduisant ce numéro de semaine et en l’additionnant au mois (universel ou personnel), Toiles assure une continuité fluide : la semaine reflète l’avancement opérationnel au sein du thème du mois en cours.'
+          ],
+        },
+        cyclesLongs: {
+          id: 'cyclesLongs',
+          titre: 'Les cycles longs : 9 ans, cycles de vie, pinacles et défis',
+          resume: 'Des périodes de plusieurs années tirées de la date de naissance, pour situer l’année en cours dans un mouvement plus vaste.',
+          formule: 'm, j, a = mois, jour, année de naissance réduits à 1 chiffre (sans maître-nombre)\nPinacles : P1 = m + j · P2 = j + a · P3 = P1 + P2 · P4 = m + a   (réduits, maîtres-nombres gardés)\nDéfis : D1 = |m − j| · D2 = |j − a| · D3 = |D1 − D2| · D4 = |m − a|\nÂges : P1 de 0 à 36 − chemin de vie (réduit à 1 chiffre) · P2 et P3 : 9 ans chacun · P4 jusqu’au bout\nCycles de vie : jeunesse = mois (pendant P1) · maturité = jour (P2 et P3) · sagesse = année (P4)\nCycle de 9 ans : rang = année personnelle réduite à 1 chiffre ; l’année 1 du cycle = année − (rang − 1)',
+          paragraphes: [
+            'Pourquoi 36 ? Le nombre 36 (= 4 × 9) est la borne traditionnelle : le premier pinacle couvre l’enfance et la jeunesse, et finit d’autant plus tôt que le chemin de vie est grand. Ensuite chaque pinacle dure un cycle complet de 9 ans.',
+            'Exemple (naissance le 15/05/1990) : m = 5, j = 1 + 5 = 6, a = 1 + 9 + 9 + 0 = 19 → 10 → 1, chemin de vie 3. Pinacles : 5 + 6 = 11 (maître-nombre gardé), 6 + 1 = 7, 11 + 7 = 18 → 9, 5 + 1 = 6. Défis : 1, 5, 4, 4. Âges : 0-33, 33-42, 42-51, 51 et plus.',
+            'Convention Toiles : les écoles ne s’accordent ni sur la réduction des composants (certaines gardent 11 et 22), ni sur les bornes des cycles de vie (parfois liées à l’année personnelle 1 la plus proche de 28 et 56 ans). Toiles retient la règle la plus fréquente dans les manuels français et l’affiche en clair dans « Voir le calcul ».',
+            'Le défi 0 n’est pas une absence : il signifie que toutes les leçons sont possibles et qu’il revient à chacun de choisir la sienne.'
+          ],
+        },
+        nomComplet: {
+          id: 'nomComplet',
+          titre: 'Les nombres du nom',
+          resume: 'Transformer les lettres en nombres avec la table pythagoricienne, puis lire trois sommes : toutes les lettres, les voyelles, les consonnes.',
+          formule: '1 2 3 4 5 6 7 8 9\nA B C D E F G H I\nJ K L M N O P Q R\nS T U V W X Y Z\n\nExpression = toutes les lettres · Élan spirituel = voyelles (A E I O U Y) · Moi intime = consonnes\nChaque mot est réduit séparément, puis les mots sont additionnés et réduits.',
+          paragraphes: [
+            'Quel nom ? Celui de l’état civil à la naissance : tous les prénoms et le nom de naissance. La tradition y voit la « vibration » reçue en arrivant ; un nom d’usage ou un pseudonyme peut se calculer à part, mais ne remplace pas celui-ci.',
+            'Conventions Toiles pour le français : accents et cédille retirés (É → E, Ç → C), ligatures dédoublées (Œ → OE, Æ → AE), tirets, apostrophes et espaces séparent les mots, tout autre signe est ignoré. Y est toujours compté comme voyelle : d’autres écoles regardent s’il se prononce comme une voyelle (Yves) ou une consonne (Yann), ce qu’un programme ne peut pas deviner.',
+            'Pourquoi réduire mot par mot ? Additionner toutes les lettres d’un coup donne presque toujours le même chiffre final, mais efface les maîtres-nombres qui apparaissent dans un prénom ou un nom. C’est la méthode la plus répandue.',
+            'Les noms des trois nombres varient selon les livres : les voyelles sont aussi appelées « nombre intime » ou « nombre de l’âme », les consonnes « nombre de réalisation » ou « personnalité ». Le calcul, lui, ne change pas.'
           ],
         },
       },
@@ -152,6 +177,92 @@
             'La convention de midi TU et la détection du signe lunaire :\nL’heure exacte de naissance n’étant pas toujours connue de mémoire, Toiles calcule le thème natal de référence à 12h00 Temps Universel (midi TU). Cette convention mathématique standardise le calcul et minimise l’erreur angulaire maximale sur la journée (±12 heures). Pour le Soleil et toutes les planètes, le déplacement sur une demi-journée est minime (< 0,5°) et ne change presque jamais leur signe zodiacal. En revanche, la Lune parcourt environ 13° par jour : elle change de signe environ une fois tous les deux jours et demi. Si la Lune franchit la frontière entre deux signes au cours de ta journée de naissance (entre 0h et 24h TU), Toiles affiche automatiquement un avertissement pour te signaler que son signe natal exact reste dépendant de ton heure de naissance.'
           ],
         },
+
+        complements: {
+          id: 'complements',
+          titre: 'Pluton, Chiron et les nœuds lunaires',
+          resume: 'Trois points complémentaires, calculés et affichés à part pour ne pas changer les lectures fondées sur les 9 astres.',
+          formule: 'Pluton : série de Schlyter (angles P = 238,95° + 0,003968789 d et S = 50,03° + 0,033459652 d)\nChiron : équation de Kepler, éléments du périhélie de 1996 (a = 13,648 UA, e = 0,3801, i = 6,935°)\nNœud Nord moyen (Meeus 47.7) : Ω = 125,0445° − 1934,1363° T  (T en siècles depuis J2000)\nNœud Sud = Ω + 180°',
+          paragraphes: [
+            'Pluton : son orbite est trop inclinée (17°) et trop perturbée par Neptune pour une ellipse fixe. Paul Schlyter donne une somme de sinus et cosinus de deux angles qui tournent lentement ; elle reste à moins de 0,1° entre 1900 et 2100 (vérifié sur ses entrées en Capricorne, 2008, et en Verseau, 2024).',
+            'Chiron : aucune série compacte n’existe. Toiles fige son orbite au passage au périhélie (février 1996) et résout l’équation de Kepler comme pour les autres planètes. Saturne et Uranus déforment peu à peu cette orbite : précision d’environ 0,5° de 1975 à 2030, qui se dégrade lentement au-delà.',
+            'Nœuds lunaires : le plan de l’orbite de la Lune est incliné de 5° sur l’écliptique ; il le coupe en deux points opposés, les nœuds. Le Soleil fait tourner ce plan : les nœuds reculent d’environ 19,3° par an. Toiles utilise le nœud MOYEN (mouvement régulier) ; le nœud « vrai » oscille de ±1,5° autour. Les éclipses ont lieu quand une nouvelle ou pleine lune tombe près d’un nœud.',
+            'Pourquoi à part ? Les 9 astres alimentent la teinte, l’équilibre des éléments, les aspects, les transits et la lecture croisée. Ajouter ces points changerait toutes ces lectures d’un coup. Ils sont donc montrés dans le ciel du moment, sur la carte du ciel et dans les maisons du thème natal, sans voter.'
+          ],
+        },
+        sideral: {
+          id: 'sideral',
+          titre: 'Zodiaque tropical et zodiaque sidéral',
+          resume: 'Deux façons de placer le début du Bélier : sur l’équinoxe (tropical, Toiles) ou sur les étoiles (sidéral).',
+          formule: 'Longitude sidérale = longitude tropicale − ayanamsa\nAyanamsa(t) = valeur au 1/1/2000 + 50,29″ × années écoulées\nLahiri : 23,853° en 2000 · Fagan-Bradley : 24,740° en 2000',
+          paragraphes: [
+            'La précession des équinoxes : l’axe de la Terre décrit un cône en environ 25 800 ans. Le point vernal (Soleil à l’équinoxe de printemps, 0° Bélier tropical) recule donc lentement devant les étoiles, de 50,29″ par an, soit 1° tous les 72 ans.',
+            'Le zodiaque tropical suit les saisons : le Soleil entre en Bélier à l’équinoxe de mars, chaque année. Le zodiaque sidéral suit les étoiles : il faut retrancher l’ayanamsa, aujourd’hui supérieur à 24°. Un astre placé dans les 24 premiers degrés d’un signe tropical se trouve donc dans le signe précédent en sidéral.',
+            'Aucun ayanamsa n’est « le bon » : chaque école choisit l’étoile ou l’époque qui fixe le départ. Lahiri (Chitrapaksha) est l’ayanamsa officiel en Inde depuis 1955 ; Fagan-Bradley est le plus utilisé par les sidéralistes occidentaux. Ils diffèrent d’environ 0,9°.',
+            'Toiles reste tropical : ses textes sont écrits pour ce zodiaque. La comparaison sert à comprendre, pas à remplacer.'
+          ],
+        },
+      },
+    },
+    maisons: {
+      id: 'maisons',
+      titre: 'Ascendant & maisons',
+      description: 'De l’heure notée à l’état civil jusqu’aux 12 maisons : fuseaux, temps sidéral, angles et domification.',
+      sections: {
+        heureLegale: {
+          id: 'heureLegale',
+          titre: 'De l’heure légale au temps universel',
+          resume: 'L’heure de l’état civil est une heure légale ; l’astronomie calcule en temps universel (TU).',
+          formule: 'TU = heure légale − décalage du fuseau ce jour-là\nFrance : TU+1 en hiver, TU+2 en été (depuis 1976) ; TU+1 toute l’année de 1946 à 1975 ;\nheure allemande (TU+1 / TU+2) en 1940-1944 ; heure du méridien de Paris (TU+9 min 21 s) avant 1911.',
+          paragraphes: [
+            'Le décalage n’est pas fixe : il dépend du pays, de l’année et de la saison. Plutôt que de recopier ces règles à la main, Toiles interroge la base des fuseaux horaires (IANA) intégrée à ton navigateur, via l’objet standard Intl. Il suffit de connaître le fuseau de la ville (ex. Europe/Paris) : les heures d’été historiques sont prises en compte.',
+            'Deux cas particuliers chaque année : au passage à l’heure d’été, l’heure entre 2 h et 3 h n’existe pas (Toiles garde alors le décalage d’hiver) ; au retour à l’heure d’hiver, elle existe deux fois (Toiles garde la première). Le calcul détaillé le signale.',
+            'La ville sert aussi à donner la latitude et la longitude. Si ta ville n’est pas dans la liste, prends la plus proche : un écart de 1° de longitude (environ 75 km en France) déplace l’Ascendant d’environ 1°.'
+          ],
+        },
+        tempsSideral: {
+          id: 'tempsSideral',
+          titre: 'Le temps sidéral',
+          resume: 'L’heure des étoiles : quel point du ciel passe au méridien du lieu.',
+          formule: 'Temps sidéral de Greenwich (Meeus 12.4) :\n  θ₀ = 280,46061837° + 360,98564736629° × (JJ − 2451545) + 0,000387933° × T² − T³ ÷ 38 710 000\n  (JJ = jour julien, T = siècles depuis le 1/1/2000 à midi TU)\nTemps sidéral local = θ₀ + longitude (est positive)\n15° = 1 heure sidérale',
+          paragraphes: [
+            'Notre horloge suit le Soleil : 24 h séparent deux midis. Mais en un jour, la Terre avance aussi d’environ 1° sur son orbite ; par rapport aux étoiles, elle a donc tourné de 360,9856°, un peu plus d’un tour. Le jour sidéral dure 23 h 56 min 4 s.',
+            'Le temps sidéral local, exprimé en degrés, est l’ascension droite du méridien (RAMC) : c’est la donnée de départ de tout le calcul des maisons. Vérification : Toiles retrouve la valeur de l’exemple 12.a de Meeus (10 avril 1987, 0 h TU : 13 h 10 min 46 s).'
+          ],
+        },
+        anglesDuTheme: {
+          id: 'anglesDuTheme',
+          titre: 'Ascendant et Milieu du Ciel',
+          resume: 'Les deux axes du thème : l’horizon (Ascendant – Descendant) et le méridien (Milieu du Ciel – Fond du Ciel).',
+          formule: 'ε = obliquité de l’écliptique ≈ 23,44° ; φ = latitude\nMC = atan2(sin RAMC, cos RAMC × cos ε)\nAS = atan2(cos RAMC, −(sin RAMC × cos ε + tan φ × sin ε))\nDescendant = AS + 180° ; Fond du Ciel = MC + 180°',
+          paragraphes: [
+            'Le Milieu du Ciel est le degré du zodiaque qui culmine au méridien. On passe de l’équateur (où se mesure le temps sidéral) à l’écliptique (où se mesure le zodiaque) en tenant compte de leur inclinaison mutuelle ε.',
+            'L’Ascendant est le degré qui se lève à l’horizon est. La latitude entre en jeu parce que l’horizon s’incline sur l’écliptique quand on s’éloigne de l’équateur : à Paris, le Poissons ou le Bélier se lèvent en moins d’une heure, la Vierge ou la Balance en près de trois. C’est pourquoi certains Ascendants sont plus fréquents que d’autres.',
+            'Le zodiaque entier défile à l’horizon en 24 h : l’Ascendant avance d’environ 1° toutes les 4 minutes. Une heure de naissance arrondie à la demi-heure peut donc faire hésiter entre deux signes quand l’Ascendant est en début ou fin de signe.'
+          ],
+        },
+        maisons: {
+          id: 'maisons',
+          titre: 'La domification de Placidus',
+          resume: 'Douze maisons qui partagent en trois le temps de montée de chaque degré, au-dessus et au-dessous de l’horizon.',
+          formule: 'Arc semi-diurne d’un degré de déclinaison δ : ASD = 90° + asin(tan φ × tan δ)\nCuspide XI : ascension droite = RAMC + ASD ÷ 3   ;  XII : RAMC + 2 × ASD ÷ 3\nCuspide II : RAMC + 180° − 2 × (180° − ASD) ÷ 3 ;  III : RAMC + 180° − (180° − ASD) ÷ 3\n(on recalcule δ et ASD jusqu’à ce que la cuspide ne bouge plus)\nI = Ascendant, X = MC ; IV, V, VI, VII, VIII, IX = opposées de X, XI, XII, I, II, III',
+          paragraphes: [
+            'Pourquoi Placidus ? C’est le système le plus utilisé en France, dans les manuels comme dans les logiciels : tes résultats seront comparables à ceux que tu trouveras ailleurs. Son idée : les maisons ne découpent pas l’espace en parts égales, mais le temps. La cuspide XI est le degré qui a parcouru le premier tiers de son trajet entre son lever et sa culmination.',
+            'Le calcul est itératif : le temps de trajet d’un degré dépend de sa déclinaison, donc de sa position… qu’on cherche. On part d’une estimation et on recommence jusqu’à stabilité (une dizaine de tours).',
+            'Limite : au-delà des cercles polaires (latitude > 66,5°), certains degrés ne se lèvent ou ne se couchent jamais et Placidus n’a plus de solution. Toiles passe alors en maisons égales (30° chacune depuis l’Ascendant) et le signale.',
+            'Vérification : pour trois naissances de référence (fiabilité AA, actes d’état civil), l’Ascendant, le Milieu du Ciel et les cuspides calculés par Toiles s’écartent de moins de 3 minutes d’arc des valeurs publiées.'
+          ],
+        },
+        maisonsDomaines: {
+          id: 'maisonsDomaines',
+          titre: 'Les maisons et les 6 domaines (convention Toiles)',
+          resume: 'Deux maisons par domaine, chacune dans un seul domaine, pour relier le thème à la grille de lecture de Toiles.',
+          formule: 'Essence : I (soi) et IV (racines)\nAmour : V (amours, plaisir) et VII (couple)\nTravail : X (vocation) et III (échanges)\nFinances : II (ressources) et VIII (ressources partagées)\nSanté : VI (quotidien) et XII (repos, retrait)\nSpiritualité : IX (quête de sens) et XI (idéaux)',
+          paragraphes: [
+            'La tradition donne plusieurs significations à chaque maison ; Toiles en retient une principale pour la ranger dans un domaine. Certains choix se discutent : la maison XII est aussi celle de la vie intérieure et du mysticisme, la XI celle des amitiés, la VI celle du travail quotidien. C’est une convention de Toiles, assumée comme telle.',
+            'Pour chaque domaine, Toiles indique le signe sur la cuspide des deux maisons (la manière de vivre ce domaine) et les planètes qui s’y trouvent (les énergies qui l’animent). Une maison vide n’est pas un domaine absent : son signe et le maître de ce signe en parlent toujours.'
+          ],
+        },
       },
     },
     croisee: {
@@ -180,6 +291,51 @@
             'On apprend mieux une notion quand on peut la voir à l’œuvre. La leçon du jour cherche donc d’abord l’événement le plus rare de la date : une lunaison n’arrive que deux fois par mois, une station quelques fois par an.',
             'Pourquoi 6,5° pour les lunaisons ? La Lune gagne environ 12° par jour sur le Soleil : une fenêtre de ±6,5° autour de l’exact désigne le jour civil où la lunaison a lieu, sans en garder deux.',
             'Le texte affiché est celui de la fiche du glossaire correspondante : la leçon ne réécrit rien, elle choisit quoi montrer. Le lien « Fiche complète » mène à la fiche, « En savoir plus » à la méthode.'
+          ],
+        },
+      },
+    },
+    suivi: {
+      id: 'suivi',
+      titre: 'Suivi & quiz',
+      description: 'Les outils pour apprendre par l’expérience : calendrier du mois, journal de bord, quiz, sauvegardes.',
+      sections: {
+        calendrier: {
+          id: 'calendrier',
+          titre: 'Le calendrier mensuel',
+          resume: 'Chaque jour du mois avec son nombre et sa Lune, et les quatre moments clés de la lunaison.',
+          formule: 'Nombre de la case = jour universel (ou personnel avec un profil)\nMoment clé ce jour-là si l’élongation Lune − Soleil franchit 0°, 90°, 180° ou 270° entre 0 h et 24 h (heure locale)',
+          paragraphes: [
+            'L’élongation (l’écart entre la Lune et le Soleil) augmente d’environ 12° par jour. En la mesurant aux deux minuits qui encadrent la journée, on sait si un moment clé a eu lieu ce jour-là, sans risque d’en compter deux ni d’en manquer un.',
+            'Les dates sont en heure locale : une pleine lune à 0 h 30 à Paris tombe le lendemain de celle annoncée à 23 h 30 en temps universel. C’est normal, et c’est pourquoi un calendrier publié dans un autre pays peut décaler une lunaison d’un jour.'
+          ],
+        },
+        journal: {
+          id: 'journal',
+          titre: 'Le journal de bord',
+          resume: 'Noter son ressenti pour vérifier soi-même, au fil des semaines, ce que les nombres et le ciel évoquent.',
+          paragraphes: [
+            'Une note par jour et par profil. En l’enregistrant, Toiles recopie une « photo » du jour : jour universel et personnel, phase de la Lune, teinte. Si un calcul est corrigé plus tard, la note garde ce que tu avais sous les yeux.',
+            'Tout reste dans le navigateur (localStorage). Exporte régulièrement : le fichier .json se recharge plus tard, le fichier .md se lit dans n’importe quel éditeur de texte.',
+            'Conseil d’apprentissage : écris d’abord ce que tu as vécu, puis seulement après regarde les nombres. Dans l’autre sens, on finit par voir ce qu’on s’attend à voir.'
+          ],
+        },
+        quiz: {
+          id: 'quiz',
+          titre: 'Le quiz',
+          resume: 'Des questions à choix multiples fabriquées à partir des fiches du glossaire.',
+          paragraphes: [
+            'Quatre sortes de questions : retrouver une notion à partir de sa définition, ou de ses mots-clés ; l’élément d’un signe ; la planète qui gouverne un signe. Les mauvaises réponses sont tirées de la même catégorie, pour qu’on ne puisse pas deviner à la forme.',
+            'Le nom de la réponse est masqué dans l’énoncé (« … »). Après chaque réponse, la définition complète s’affiche, avec un lien vers sa fiche.'
+          ],
+        },
+        sauvegardes: {
+          id: 'sauvegardes',
+          titre: 'Sauvegarder et recharger',
+          resume: 'Les profils et le journal vivent dans le navigateur : un fichier de sauvegarde les met à l’abri.',
+          paragraphes: [
+            'Import des profils : Toiles relit le fichier .json exporté, vérifie chaque profil (nom, date, heure, lieu) et n’écrase jamais rien. Un profil de même nom (sans tenir compte des majuscules ni des accents) et de même date de naissance est un doublon : il est ignoré. Les profils invalides sont écartés, avec la raison.',
+            'Pourquoi pas de fusion automatique des doublons ? Parce qu’on ne sait pas lequel est le plus juste. Pour remplacer un profil, supprime-le d’abord puis réimporte.'
           ],
         },
       },

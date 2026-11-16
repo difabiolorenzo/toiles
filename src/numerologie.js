@@ -265,7 +265,181 @@
     };
   }
 
+  // =====================================================================
+  //  CYCLES LONGS : cycle de 9 ans, cycles de vie, pinacles et défis
+  //
+  //  Les nombres de la vue Aujourd'hui découpent le temps en années, mois et
+  //  jours. La numérologie lit aussi des périodes de plusieurs années, toutes
+  //  tirées de la date de naissance :
+  //   - le CYCLE DE 9 ANS : l'année personnelle va de 1 à 9 puis recommence ;
+  //     on repère l'année 1 qui a ouvert le cycle en cours ;
+  //   - les 3 CYCLES DE VIE : la jeunesse (mois de naissance), la maturité
+  //     (jour), la sagesse (année) ;
+  //   - les 4 PINACLES (« sommets ») : les opportunités d'une période ;
+  //   - les 4 DÉFIS : la difficulté à travailler pendant la même période.
+  //
+  //  Conventions Toiles (les écoles varient, on le signale dans la méthodologie) :
+  //   - mois, jour et année de naissance sont d'abord réduits à UN chiffre
+  //     (sans maître-nombre : 29 → 11 → 2) ;
+  //   - pinacles : réduits en gardant les maîtres-nombres (5 + 6 = 11 reste 11) ;
+  //   - défis : différences, donc toujours entre 0 et 8 (0 = « défi du choix ») ;
+  //   - le 1er pinacle finit à 36 − chemin de vie (chemin réduit à un chiffre :
+  //     11 → 2, 22 → 4, 33 → 6), les deux suivants durent 9 ans, le 4e jusqu'au bout ;
+  //   - les cycles de vie suivent les mêmes âges : jeunesse = 1er pinacle,
+  //     maturité = 2e et 3e pinacles, sagesse = 4e.
+  //  Les âges sont des anniversaires : « de 0 à 33 ans » = jusqu'au 33e anniversaire.
+  // =====================================================================
+
+  /**
+   * Position dans le cycle de 9 ans à une date.
+   * Renvoie { rang: 1–9, anneeDebut, anneeFin }. Les maîtres-nombres comptent
+   * pour leur racine (année personnelle 11 = 2e année du cycle).
+   */
+  function cycleNeufAns(date, naissance) {
+    const rang = reduire(anneePersonnelle(date, naissance), false);
+    const anneeDebut = date.getFullYear() - (rang - 1);
+    return { rang, anneeDebut, anneeFin: anneeDebut + 8 };
+  }
+
+  /**
+   * Cycles de vie, pinacles et défis d'une naissance.
+   * date (facultative) : marque comme « actif » le pinacle / cycle en cours.
+   */
+  function cyclesLongs(naissance, date) {
+    const un = (n) => reduire(n, false);   // réduction à un chiffre, sans maître-nombre
+    const m = un(naissance.getMonth() + 1);
+    const j = un(naissance.getDate());
+    const a = un(sommeChiffres(naissance.getFullYear()));
+    const chemin = un(cheminDeVie(naissance));
+
+    // Âges de fin (anniversaires) des trois premiers pinacles.
+    const fin1 = 36 - chemin, fin2 = fin1 + 9, fin3 = fin2 + 9;
+    const p1 = reduire(m + j), p2 = reduire(j + a);
+    const p3 = reduire(p1 + p2), p4 = reduire(m + a);
+    const d1 = Math.abs(m - j), d2 = Math.abs(j - a);
+    const d3 = Math.abs(d1 - d2), d4 = Math.abs(m - a);
+
+    const periode = (debut, fin) => ({
+      ageDebut: debut, ageFin: fin,
+      anneeDebut: naissance.getFullYear() + debut,
+      anneeFin: fin === null ? null : naissance.getFullYear() + fin,
+    });
+    const periodes = [periode(0, fin1), periode(fin1, fin2), periode(fin2, fin3), periode(fin3, null)];
+    const pinacles = [
+      { rang: 1, valeur: p1, calcul: `mois (${m}) + jour (${j}) = ${m + j}`, ...periodes[0] },
+      { rang: 2, valeur: p2, calcul: `jour (${j}) + année (${a}) = ${j + a}`, ...periodes[1] },
+      { rang: 3, valeur: p3, calcul: `1er pinacle (${p1}) + 2e pinacle (${p2}) = ${p1 + p2}`, ...periodes[2] },
+      { rang: 4, valeur: p4, calcul: `mois (${m}) + année (${a}) = ${m + a}`, ...periodes[3] },
+    ];
+    const defis = [
+      { rang: 1, valeur: d1, calcul: `|mois (${m}) − jour (${j})|`, ...periodes[0] },
+      { rang: 2, valeur: d2, calcul: `|jour (${j}) − année (${a})|`, ...periodes[1] },
+      { rang: 3, valeur: d3, calcul: `|1er défi (${d1}) − 2e défi (${d2})|`, ...periodes[2] },
+      { rang: 4, valeur: d4, calcul: `|mois (${m}) − année (${a})|`, ...periodes[3] },
+    ];
+    const cyclesDeVie = [
+      { nom: 'Jeunesse', valeur: reduire(naissance.getMonth() + 1), source: 'mois de naissance', ...periode(0, fin1) },
+      { nom: 'Maturité', valeur: reduire(naissance.getDate()), source: 'jour de naissance', ...periode(fin1, fin3) },
+      { nom: 'Sagesse', valeur: reduire(sommeChiffres(naissance.getFullYear())), source: 'année de naissance', ...periode(fin3, null) },
+    ];
+
+    // Période en cours : on compare l'âge (en anniversaires révolus) aux bornes.
+    if (date) {
+      const age = ageRevolu(naissance, date);
+      const enCours = (p) => age >= p.ageDebut && (p.ageFin === null || age < p.ageFin);
+      for (const liste of [pinacles, defis, cyclesDeVie]) for (const p of liste) p.actif = enCours(p);
+    }
+    return {
+      base: { mois: m, jour: j, annee: a, chemin },
+      pinacles, defis, cyclesDeVie,
+      cycleNeufAns: date ? cycleNeufAns(date, naissance) : null,
+      age: date ? ageRevolu(naissance, date) : null,
+    };
+  }
+
+  /** Âge en années révolues (anniversaire passé ou non dans l'année). */
+  function ageRevolu(naissance, date) {
+    let age = date.getFullYear() - naissance.getFullYear();
+    const avantAnniversaire = date.getMonth() < naissance.getMonth() ||
+      (date.getMonth() === naissance.getMonth() && date.getDate() < naissance.getDate());
+    if (avantAnniversaire) age--;
+    return age;
+  }
+
+  // =====================================================================
+  //  NUMÉROLOGIE DU NOM
+  //
+  //  Table pythagoricienne : les lettres sont numérotées 1 à 9 en boucle.
+  //     1  2  3  4  5  6  7  8  9
+  //     A  B  C  D  E  F  G  H  I
+  //     J  K  L  M  N  O  P  Q  R
+  //     S  T  U  V  W  X  Y  Z
+  //  Trois nombres :
+  //   - EXPRESSION     : toutes les lettres (comment on agit, ses talents) ;
+  //   - ÉLAN SPIRITUEL : les voyelles (ce qui motive en profondeur) ;
+  //   - MOI INTIME     : les consonnes (l'image que l'on donne, le « moi » discret).
+  //  Les noms varient selon les livres (voyelles = « nombre intime » chez
+  //  certains auteurs, consonnes = « nombre de réalisation ») : la méthodologie le dit.
+  //
+  //  Conventions Toiles :
+  //   - accents et cédille retirés (é → E, ç → C) ; Œ → OE, Æ → AE, ß → SS ;
+  //   - tirets, apostrophes et espaces séparent les MOTS ; tout le reste est ignoré ;
+  //   - Y est compté comme VOYELLE (règle simple ; d'autres écoles regardent
+  //     s'il se prononce comme une voyelle, ce qu'un programme ne peut pas deviner) ;
+  //   - chaque mot (prénom, nom…) est réduit séparément, puis les mots sont
+  //     additionnés et réduits : cela laisse apparaître les maîtres-nombres.
+  // =====================================================================
+
+  const VOYELLES = 'AEIOUY';
+
+  /** Valeur pythagoricienne d'une lettre A–Z (A = 1 … I = 9, J = 1 …). */
+  const valeurLettre = (lettre) => ((lettre.charCodeAt(0) - 65) % 9) + 1;
+
+  /** "Hélène-Ève d'Aÿ" → ["HELENE", "EVE", "D", "AY"] : mots en lettres A–Z seules. */
+  function motsDuNom(nom) {
+    return (nom || '')
+      .replace(/[œŒ]/g, 'oe').replace(/[æÆ]/g, 'ae').replace(/ß/g, 'ss')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toUpperCase()
+      .split(/[\s\-'’]+/)
+      .map((mot) => mot.replace(/[^A-Z]/g, ''))
+      .filter(Boolean);
+  }
+
+  /**
+   * Calcul d'un des trois nombres du nom, avec ses étapes.
+   * filtre : 'toutes' | 'voyelles' | 'consonnes'.
+   */
+  function nombreDuNom(nom, filtre = 'toutes') {
+    const garder = (l) => filtre === 'toutes' || (filtre === 'voyelles') === VOYELLES.includes(l);
+    const etapes = [];
+    let total = 0;
+    for (const mot of motsDuNom(nom)) {
+      const lettres = [...mot].filter(garder);
+      if (!lettres.length) continue;
+      const somme = lettres.reduce((s, l) => s + valeurLettre(l), 0);
+      const r = reduire(somme);
+      etapes.push(`${mot} : ${lettres.map((l) => `${l}=${valeurLettre(l)}`).join(' ')} → ${somme}${r !== somme ? ' → ' + r : ''}`);
+      total += r;
+    }
+    if (!etapes.length) return { valeur: null, etapes: ['Aucune lettre à compter.'] };
+    const fin = reduireAvecEtapes(total);
+    etapes.push(`Total des mots : ${total}`, ...fin.etapes);
+    return { valeur: fin.valeur, etapes };
+  }
+
+  /** Les trois nombres du nom complet (de naissance, tel qu'à l'état civil). */
+  function nombresDuNom(nom) {
+    return {
+      expression: nombreDuNom(nom, 'toutes'),
+      elanSpirituel: nombreDuNom(nom, 'voyelles'),
+      moiIntime: nombreDuNom(nom, 'consonnes'),
+    };
+  }
+
   T.numerologie = {
+    cycleNeufAns, cyclesLongs, ageRevolu,
+    valeurLettre, motsDuNom, nombreDuNom, nombresDuNom,
     additionDuJour,
     reduire, sommeChiffres, semaineISO, reduireAvecEtapes, expliquer,
     anneeUniverselle, moisUniversel, semaineUniverselle, jourUniversel,

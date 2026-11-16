@@ -24,6 +24,7 @@
     { id: 'signe', libelle: 'Signes' },
     { id: 'astre', libelle: 'Planètes' },
     { id: 'aspect', libelle: 'Aspects' },
+    { id: 'maison', libelle: 'Maisons' },
     { id: 'notion', libelle: 'Notions' },
   ];
 
@@ -116,6 +117,18 @@
     }
 
     for (const b of blocsLiens(cle, e)) if (b.liens.length) blocs.push(b);
+
+    // Maison : à quel domaine de Toiles elle est rattachée (table de src/maisons.js).
+    if (e.categorie === 'maison' && T.maisons) {
+      const numero = Number(cle.replace('maison', ''));
+      const domaine = T.maisons.domaineDeLaMaison(numero);
+      const soeur = T.maisons.DOMAINES_MAISONS[domaine].find((n) => n !== numero);
+      blocs.push({
+        titre: 'Dans Toiles',
+        texte: `Rattachée au domaine ${LIBELLES_DOMAINES[domaine]}, avec la maison ${T.maisons.ROMAINS[soeur - 1]}.`,
+        liens: [lien('maison' + soeur), lien('domification')],
+      });
+    }
 
     // Effet de la rétrogradation propre à cette planète (déjà rédigé dans l'entrée « retrograde »).
     const retro = T.glossaire.retrograde.parAstre[cle];

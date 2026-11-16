@@ -12,7 +12,9 @@
  */
 (function () {
   'use strict';
-  const { numerologie: N, astres: A, schemas: S, transits: TR, textes: TXT, glossaire: G, methodologie: M, fiches: F, croisee: C, cleGlossaire, cleNombre } = window.Toiles;
+  const { numerologie: N, astres: A, schemas: S, transits: TR, textes: TXT, glossaire: G, methodologie: M, fiches: F, croisee: C, maisons: MS, villes: V, cleGlossaire, cleNombre } = window.Toiles;
+  // Modules de la v0.7 : points complémentaires, calendrier, journal, quiz.
+  const { complements: CP, calendrier: CAL, journal: J, quiz: Q } = window.Toiles;
 
   // Stocke les transits calculés pour la date courante (utilisé par contenuTransit lors du clic)
   let transitsCourants = [];
@@ -340,6 +342,16 @@
         <td class="num">${terme('degre', Math.floor(x.signe.degre) + '°', 'Degré')} ${terme(cleGlossaire(x.signe.nom), `<span class="glyphe">${x.signe.glyphe}\uFE0E</span> ${x.signe.nom}`, x.signe.nom)}</td>
       </tr>`).join('');
 
+    // Points complémentaires (Pluton, Chiron, nœuds) : même présentation, sans
+    // lecture « planète en signe » (pas de textes rédigés pour eux).
+    $('complements').innerHTML = CP.positions(date).map((x) => `
+      <tr>
+        <td class="g">${terme(x.cle, x.glyphe + '︎', x.nom)}</td>
+        <td>${terme(x.cle, x.nom)}${x.retrograde
+          ? ' ' + terme('retrograde', '<span class="retro" title="rétrograde">℞</span>', `${x.nom} rétrograde`) : ''}</td>
+        <td class="num">${Math.floor(x.signe.degre)}° ${terme(cleGlossaire(x.signe.nom), `<span class="glyphe">${x.signe.glyphe}︎</span> ${x.signe.nom}`, x.signe.nom)}</td>
+      </tr>`).join('');
+
     // Dynamique
     const barres = (o) => Object.entries(o).map(([k, v]) =>
       `<div class="barre"><span>${terme(k, k)}</span><i style="--v:${v}"></i><b>${pct(v)}</b></div>`).join('');
@@ -463,6 +475,7 @@
   // (classes .schema-…), pour suivre automatiquement le thème.
 
 
+  /** pos : les 9 astres, éventuellement suivis des points complémentaires (dessinés plus discrets). */
   function rendreCarteGeo(pos) {
     const g = S.carteGeocentrique(pos);
     const c = g.centre;
@@ -484,7 +497,7 @@
         svg += `<line class="schema-lien" x1="${a.repere.x}" y1="${a.repere.y}" x2="${a.point.x}" y2="${a.point.y}"/>`;
       }
       svg += `<circle class="schema-repere" cx="${a.repere.x}" cy="${a.repere.y}" r="2"/>
-        <text class="schema-astre" x="${a.point.x}" y="${a.point.y}"><title>${echapper(titre)}</title>${p.glyphe}\uFE0E</text>`;
+        <text class="schema-astre${p.complement ? ' schema-complement' : ''}" x="${a.point.x}" y="${a.point.y}"><title>${echapper(titre)}</title>${p.glyphe}\uFE0E</text>`;
     }
     // La Terre au centre : le point de vue.
     svg += `<circle class="schema-terre" cx="${c}" cy="${c}" r="7"><title>La Terre (point de vue)</title></circle></svg>`;
@@ -510,18 +523,345 @@
     $('carte-helio').innerHTML = svg;
   }
 
-  function rendreTransits(date, naissance) {
+  /**
+   * Carte « Ascendant & maisons ». r : résultat de Toiles.maisons.calculer(profil),
+   * ou null si le profil n'a pas d'heure ou de lieu de naissance.
+   */
+  function rendreMaisons(r, profil, domaine) {
+    if (!profil) {
+      $('maisons').innerHTML = '<p class="aide-profil">Choisis un profil pour calculer ton Ascendant et tes maisons.</p>';
+      return;
+    }
+    if (!r) {
+      $('maisons').innerHTML = '<p class="aide-profil">Ajoute l’heure et le lieu de naissance de ce profil (bouton « Gérer ») pour calculer l’Ascendant et les maisons.</p>';
+      return;
+    }
+    // Glyphe cliquable + degré entier + nom du signe (U+FE0E : pas de rendu emoji).
+    const enSigne = (lon) => {
+      const s = A.signe(lon);
+      return `${terme(cleGlossaire(s.nom), s.glyphe + '\uFE0E', s.nom)} ${Math.floor(s.degre)}° ${s.nom}`;
+    };
+    // Dans le tableau, forme courte (glyphe + degré, glyphes des planètes) pour tenir
+    // dans une colonne de téléphone ; le nom complet est dans l'aria-label et la bulle.
+    const signeCourt = (lon) => {
+      const s = A.signe(lon);
+      return `<span title="${s.nom}">${terme(cleGlossaire(s.nom), s.glyphe + '\uFE0E', s.nom)} ${Math.floor(s.degre)}°</span>`;
+    };
+    const astresDe = (m) => m.astres.length
+      ? m.astres.map((c) => terme(c, A.ASTRES[c].glyphe + '\uFE0E', A.ASTRES[c].nom)).join(' ')
+      : '—';
+    const titreMaison = (m) => G['maison' + m.numero].titre;
+
+    // Le domaine choisi dans le formulaire : ses deux maisons, une phrase chacune.
+    const phrases = MS.DOMAINES_MAISONS[domaine].map((n) => {
+      const m = r.maisons[n - 1];
+      const habitants = m.astres.length ? `, avec ${m.astres.map((c) => A.ASTRES[c].nom).join(', ')}` : ', sans planète';
+      return `<li>${terme('maison' + m.numero, titreMaison(m), titreMaison(m))} : commence en ${m.signe.nom}${habitants}.</li>`;
+    }).join('');
+
+    const lignes = r.maisons.map((m) => `
+      <tr${MS.DOMAINES_MAISONS[domaine].includes(m.numero) ? ' class="maison-domaine"' : ''}>
+        <td class="g">${terme('maison' + m.numero, m.romain, titreMaison(m))}</td>
+        <td class="num">${signeCourt(m.cuspide)}</td>
+        <td>${LIBELLES_DOMAINES[m.domaine]}</td>
+        <td class="g">${astresDe(m)}</td>
+      </tr>`).join('');
+
+    const c = r.conversion;
+    const alerte = {
+      inexistante: 'Cette heure n’a pas existé (passage à l’heure d’été) : vérifie l’heure notée. Toiles retient l’heure d’hiver.',
+      ambigue: 'Cette heure a été vécue deux fois (retour à l’heure d’hiver) : Toiles retient la première, encore en heure d’été.',
+    }[c.statut];
+    $('maisons').innerHTML = `
+      <p class="angles-theme">
+        <span>${terme('ascendant', 'AS', 'Ascendant')} ${enSigne(r.asc)}</span>
+        <span>${terme('milieuDuCiel', 'MC', 'Milieu du Ciel')} ${enSigne(r.mc)}</span>
+      </p>
+      <p class="natal-resume"><small>Naissance à ${profil.heure} (heure légale, ${V.texteDecalage(c.decalage)}) à ${echapper(profil.lieu.nom)} → ${versHeureTU(c.date)} TU · ${r.systeme === 'placidus' ? 'maisons de Placidus' : 'maisons égales (latitude polaire)'}</small></p>
+      ${alerte ? `<div class="avertissement-lune"><strong>À noter</strong> <div>${alerte}</div></div>` : ''}
+      <p class="label">Domaine ${LIBELLES_DOMAINES[domaine]}</p>
+      <ul class="maisons-domaine">${phrases}</ul>
+      <table class="astres maisons-table">
+        <thead><tr><th>Maison</th><th>Début</th><th>Domaine</th><th>Planètes</th></tr></thead>
+        <tbody>${lignes}</tbody>
+      </table>
+      ${blocCalcul(MS.expliquer(profil, r))}
+      ${complementsNatals(r)}`;
+  }
+
+  /** Pluton, Chiron et les nœuds dans les maisons du thème natal (à l'heure exacte). */
+  function complementsNatals(r) {
+    const lignes = CP.positions(r.theme.date).map((x) =>
+      `<li>${terme(x.cle, x.glyphe + '︎ ' + x.nom, x.nom)} : ${Math.floor(x.signe.degre)}° ${x.signe.nom}, maison ${MS.ROMAINS[MS.maisonDe(x.lon, r.cuspides) - 1]}</li>`).join('');
+    return `<h3>Points complémentaires natals</h3><ul class="maisons-domaine">${lignes}</ul>`;
+  }
+
+  // ===================== Tropical / sidéral =====================
+
+  function rendreSideral(date, pos) {
+    const ecole = $('ayanamsa').value || 'lahiri';
+    const ayan = CP.ayanamsa(date, ecole);
+    const deg = Math.floor(ayan), min = Math.floor((ayan - deg) * 60);
+    const lignes = CP.comparerSideral(pos, date, ecole).map((x) => `
+      <tr${x.change ? '' : ' class="maison-domaine"'}>
+        <td class="g">${terme(x.cle, x.glyphe + '︎', x.nom)}</td>
+        <td class="num">${x.tropical.glyphe}︎ ${Math.floor(x.tropical.degre)}°</td>
+        <td class="num">${x.sideral.glyphe}︎ ${Math.floor(x.sideral.degre)}° <small>${x.sideral.nom}</small></td>
+      </tr>`).join('');
+    const memes = CP.comparerSideral(pos, date, ecole).filter((x) => !x.change).length;
+    $('sideral').innerHTML = `
+      <p>${terme('ayanamsa', 'Ayanamsa')} ${AYANAMSA_NOMS[ecole]} : <strong>${deg}° ${String(min).padStart(2, '0')}′</strong> — chaque astre recule d’autant en ${terme('sideral', 'sidéral')}.</p>
+      <table class="astres maisons-table">
+        <thead><tr><th>Astre</th><th>Tropical</th><th>Sidéral</th></tr></thead>
+        <tbody>${lignes}</tbody>
+      </table>
+      <p class="caption">${memes} astre(s) sur ${pos.length} gardent leur signe (lignes surlignées). Les textes de Toiles restent tropicaux.</p>`;
+  }
+  const AYANAMSA_NOMS = Object.fromEntries(Object.entries(CP.AYANAMSAS).map(([k, v]) => [k, v.nom]));
+
+  // ===================== Cycles longs & nombres du nom =====================
+
+  /** Une ligne de période (pinacle, défi, cycle de vie) : âges, années, nombre cliquable. */
+  function lignePeriode(titre, p, detail) {
+    const ages = p.ageFin === null ? `dès ${p.ageDebut} ans (${p.anneeDebut})` : `${p.ageDebut}–${p.ageFin} ans (${p.anneeDebut}–${p.anneeFin})`;
+    const pastille = cleNombre(p.valeur) in G
+      ? `<button type="button" class="terme chiffre" data-glossaire="${cleNombre(p.valeur)}" aria-label="Nombre ${p.valeur} : définition">${p.valeur}</button>`
+      : `<span class="chiffre">${p.valeur}</span>`; // défi 0 : pas de fiche « nombre0 »
+    return `
+      <div class="nombre${p.actif ? ' periode-active' : ''}">
+        ${pastille}
+        <div><strong>${titre}${p.actif ? ' · en cours' : ''}</strong>
+          <p>${ages}${detail ? ' · ' + detail : ''}</p></div>
+      </div>`;
+  }
+
+  function rendreCycles(date, naissance) {
+    if (!naissance) {
+      $('cycles').innerHTML = '<p class="aide-profil">Choisis un profil ou saisis une date de naissance pour voir tes cycles longs.</p>';
+      return;
+    }
+    const c = N.cyclesLongs(naissance, date);
+    const neuf = c.cycleNeufAns;
+    const mot = (n) => (G[cleNombre(n)] ? G[cleNombre(n)].mot : 'choix libre');
+    const etapes = [
+      `Mois de naissance → ${c.base.mois}, jour → ${c.base.jour}, année → ${c.base.annee} (réduits à un chiffre)`,
+      `Chemin de vie réduit à un chiffre : ${c.base.chemin} → 1er pinacle jusqu’à 36 − ${c.base.chemin} = ${36 - c.base.chemin} ans`,
+      ...c.pinacles.map((p) => `Pinacle ${p.rang} : ${p.calcul} → ${p.valeur}`),
+      ...c.defis.map((d) => `Défi ${d.rang} : ${d.calcul} = ${d.valeur}`),
+    ];
+    $('cycles').innerHTML = `
+      <p>${terme('cycleNeufAns', 'Cycle de 9 ans')} : année <strong>${neuf.rang}</strong> sur 9 (cycle ${neuf.anneeDebut}–${neuf.anneeFin}) · ${c.age} ans</p>
+      <div class="frise-neuf" role="img" aria-label="Année ${neuf.rang} du cycle de 9 ans">${Array.from({ length: 9 }, (_, i) =>
+        `<span class="${i + 1 === neuf.rang ? 'actuelle' : i + 1 < neuf.rang ? 'passee' : ''}">${i + 1}</span>`).join('')}</div>
+      <h3>${terme('cycleDeVie', 'Cycles de vie')}</h3>
+      ${c.cyclesDeVie.map((p) => lignePeriode(`${p.nom} · ${mot(p.valeur)}`, p, p.source)).join('')}
+      <h3>${terme('pinacle', 'Pinacles')}</h3>
+      ${c.pinacles.map((p) => lignePeriode(`Pinacle ${p.rang} · ${mot(p.valeur)}`, p)).join('')}
+      <h3>${terme('defi', 'Défis')}</h3>
+      ${c.defis.map((p) => lignePeriode(`Défi ${p.rang} · ${p.valeur === 0 ? 'défi du choix' : mot(p.valeur)}`, p)).join('')}
+      ${blocCalcul(etapes)}`;
+  }
+
+  function rendreNom(profil, domaine) {
+    if (!profil || !profil.nomComplet) {
+      $('nom').innerHTML = `<p class="aide-profil">${profil
+        ? 'Ajoute le nom complet de naissance de ce profil (bouton « Gérer ») pour calculer les nombres du nom.'
+        : 'Choisis un profil et renseigne son nom complet de naissance pour calculer les nombres du nom.'}</p>`;
+      return;
+    }
+    const n = N.nombresDuNom(profil.nomComplet);
+    const bloc = (cle, titre, r) => r.valeur === null
+      ? `<p class="aide-profil">${titre} : aucune lettre à compter.</p>`
+      : blocNombre(terme(cle, titre), r, domaine);
+    $('nom').innerHTML = `
+      <p class="natal-resume"><small>${echapper(profil.nomComplet)}</small></p>
+      ${bloc('expression', 'Expression', n.expression)}
+      ${bloc('elanSpirituel', 'Élan spirituel', n.elanSpirituel)}
+      ${bloc('moiIntime', 'Moi intime', n.moiIntime)}`;
+  }
+
+  // ===================== Calendrier du mois =====================
+
+  function rendreCalendrier(date, naissance) {
+    const profilId = profilCourant() ? profilCourant().id : '';
+    const m = CAL.mois(date.getFullYear(), date.getMonth(), naissance, J.datesRemplies(profilId));
+    const choisie = versChamp(date);
+    const cellule = (j) => {
+      if (!j) return '<td></td>';
+      const nombre = j.jourPersonnel ?? j.jourUniversel;
+      const lune = j.lunaison ? `<span class="cal-lunaison" title="${j.lunaison.nom}">${j.lunaison.glyphe}</span>` : '';
+      return `<td${j.date === choisie ? ' class="cal-choisi"' : ''}>
+        <button type="button" class="cal-jour" data-jour="${j.date}" aria-label="${j.numero} : jour ${nombre}${j.lunaison ? ', ' + j.lunaison.nom : ''}${j.journal ? ', note au journal' : ''}">
+          <span class="cal-numero">${j.numero}${j.journal ? '<i class="cal-note" aria-hidden="true">✎</i>' : ''}</span>
+          <span class="cal-nombre">${nombre}</span>
+          <span class="cal-lune"><span class="disque mini" style="--ill:${j.illumination};--sens:${j.croissante ? 1 : -1}"></span>${lune}</span>
+        </button></td>`;
+    };
+    $('calendrier').innerHTML = `
+      <div class="cal-entete">
+        <button type="button" class="lien" data-mois="-1" aria-label="Mois précédent">← Préc.</button>
+        <p class="heading">${m.titre}</p>
+        <button type="button" class="lien" data-mois="1" aria-label="Mois suivant">Suiv. →</button>
+      </div>
+      <p class="caption">Nombre de chaque case : jour ${naissance ? 'personnel' : 'universel'}. ● nouvelle lune · ◐ premier quartier · ○ pleine lune · ◑ dernier quartier · ✎ note au journal.</p>
+      <table class="calendrier">
+        <thead><tr>${m.entetes.map((e) => `<th>${e}</th>`).join('')}</tr></thead>
+        <tbody>${m.semaines.map((s) => `<tr>${s.map(cellule).join('')}</tr>`).join('')}</tbody>
+      </table>
+      <ul class="cal-lunaisons">${m.lunaisons.map((j) => `<li>${j.lunaison.glyphe} ${j.lunaison.nom} : ${dateFr(j.date)}</li>`).join('')}</ul>`;
+  }
+
+  /** Change la date de toute la page (clic sur une case du calendrier, mois précédent/suivant). */
+  function allerA(date) {
+    $('date').value = versChamp(date);
+    rendre();
+  }
+
+  function initCalendrier() {
+    $('calendrier').addEventListener('click', (e) => {
+      const jour = e.target.closest('[data-jour]');
+      if (jour) return allerA(lireDate(jour.dataset.jour));
+      const mois = e.target.closest('[data-mois]');
+      if (mois) {
+        const d = dateCourante();
+        // Le 1er du mois visé : évite le 31 janvier + 1 mois = 3 mars.
+        allerA(new Date(d.getFullYear(), d.getMonth() + Number(mois.dataset.mois), 1, 12));
+      }
+    });
+  }
+
+  // ===================== Journal de bord =====================
+
+  const HUMEURS = { 1: 'basse', 2: 'plutôt basse', 3: 'moyenne', 4: 'plutôt haute', 5: 'haute' };
+
+  function rendreJournal(date, naissance) {
+    const profil = profilCourant();
+    const id = profil ? profil.id : '';
+    const e = J.lire(versChamp(date), id);
+    const ctx = J.contexteDuJour(date, naissance);
+    $('journal-contexte').textContent = `${dateFr(versChamp(date))}${profil ? ' · ' + profil.nom : ''} · jour universel ${ctx.jourUniversel}` +
+      `${ctx.jourPersonnel ? ', personnel ' + ctx.jourPersonnel : ''} · ${ctx.phase} · teinte ${NOMS_ELEMENTS[ctx.teinte]}`;
+    $('journal-texte').value = e ? e.texte : '';
+    $('journal-humeur').value = e && e.humeur ? String(e.humeur) : '';
+    $('journal-etat').textContent = e ? `Enregistré le ${new Date(e.modifie).toLocaleString('fr-FR')}` : '';
+
+    const dernieres = J.lister(id).slice(0, 5);
+    $('liste-journal').innerHTML = dernieres.length
+      ? dernieres.map((x) => `
+        <li><button type="button" class="lien" data-jour-journal="${x.date}">${dateFr(x.date)}</button>
+          <small>${x.contexte ? `jour ${x.contexte.jourPersonnel ?? x.contexte.jourUniversel} · ${x.contexte.phase}` : ''}${x.humeur ? ` · humeur ${HUMEURS[x.humeur]}` : ''}</small>
+          <p>${echapper(x.texte.length > 140 ? x.texte.slice(0, 140) + '…' : x.texte)}</p></li>`).join('')
+      : '<li class="aide-profil">Aucune note pour l’instant.</li>';
+  }
+
+  function initJournal() {
+    $('form-journal').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const date = dateCourante();
+      const profil = profilCourant();
+      const humeur = $('journal-humeur').value ? Number($('journal-humeur').value) : null;
+      try {
+        const entree = J.ecrire({
+          date: versChamp(date), profil: profil ? profil.id : '',
+          texte: $('journal-texte').value, humeur,
+          contexte: J.contexteDuJour(date, naissanceCourante()),
+        });
+        rendreJournal(date, naissanceCourante());
+        rendreCalendrier(date, naissanceCourante()); // le signe ✎ du jour apparaît ou disparaît
+        $('journal-etat').textContent = entree ? 'Note enregistrée.' : 'Note effacée (texte vide).';
+      } catch (err) {
+        $('journal-etat').textContent = err.message;
+      }
+    });
+    // Le formulaire du journal fait partie du <main>, pas du formulaire de date : rien à filtrer.
+    $('liste-journal').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-jour-journal]');
+      if (b) allerA(lireDate(b.dataset.jourJournal));
+    });
+    const nomsProfils = () => Object.fromEntries(P.lister().map((p) => [p.id, p.nom]));
+    $('journal-exporter').addEventListener('click', () =>
+      telecharger(`toiles-journal-${versChamp(new Date())}.json`, J.exporter()));
+    $('journal-exporter-texte').addEventListener('click', () =>
+      telecharger(`toiles-journal-${versChamp(new Date())}.md`, J.exporterTexte(nomsProfils()), 'text/markdown'));
+  }
+
+  // ===================== Quiz =====================
+
+  let questionQuiz = null;
+  const scoreQuiz = { justes: 0, total: 0, recentes: [] };
+
+  function nouvelleQuestion() {
+    questionQuiz = Q.question($('quiz-categorie').value, Math.random, scoreQuiz.recentes);
+    scoreQuiz.recentes = [...scoreQuiz.recentes, questionQuiz.cle].slice(-10); // évite les répétitions proches
+    $('quiz-question').innerHTML = `
+      <p class="label">${questionQuiz.consigne}</p>
+      <p class="heading">${echapper(questionQuiz.enonce)}</p>
+      <div class="quiz-choix">${questionQuiz.choix.map((c, i) =>
+        `<button type="button" class="quiz-reponse" data-reponse="${i}">${c.libelle}</button>`).join('')}</div>
+      <div id="quiz-retour" role="status"></div>`;
+  }
+
+  function repondreQuiz(index) {
+    const q = questionQuiz;
+    if (!q || q.repondue) return;
+    q.repondue = true;
+    const juste = Q.verifier(q, index);
+    scoreQuiz.total++;
+    if (juste) scoreQuiz.justes++;
+    document.querySelectorAll('#quiz-question .quiz-reponse').forEach((b, i) => {
+      b.disabled = true;
+      if (i === q.bonne) b.classList.add('juste');
+      else if (i === index) b.classList.add('fausse');
+    });
+    $('quiz-retour').innerHTML = `
+      <p><strong>${juste ? 'Juste !' : `Pas tout à fait : c’était ${q.choix[q.bonne].libelle}.`}</strong> ${echapper(q.explication)}</p>
+      <p class="liens-fiche">
+        <button type="button" class="lien" data-fiche="${q.cle}">Fiche complète →</button>
+        <button type="button" class="principal" id="quiz-suivante">Question suivante</button>
+      </p>`;
+    $('quiz-score').textContent = `Score : ${scoreQuiz.justes} / ${scoreQuiz.total}`;
+    $('quiz-suivante').focus();
+  }
+
+  function initQuiz() {
+    $('quiz-categorie').innerHTML = [{ id: 'tout', libelle: 'Tout' }, ...F.CATEGORIES]
+      .map((c) => `<option value="${c.id}">${c.libelle}</option>`).join('');
+    $('ouvrir-quiz').addEventListener('click', () => {
+      nouvelleQuestion();
+      $('panneau-quiz').showModal();
+    });
+    $('fermer-quiz').addEventListener('click', () => $('panneau-quiz').close());
+    $('panneau-quiz').addEventListener('click', (e) => {
+      if (e.target === $('panneau-quiz')) return $('panneau-quiz').close();
+      const r = e.target.closest('[data-reponse]');
+      if (r) return repondreQuiz(Number(r.dataset.reponse));
+      if (e.target.closest('#quiz-suivante')) nouvelleQuestion();
+      // « Fiche complète » : le panneau des fiches s'ouvre par-dessus (écouteur global).
+    });
+    $('quiz-categorie').addEventListener('change', nouvelleQuestion);
+  }
+
+  /** Date → « 09:40 » en temps universel. */
+  const versHeureTU = (d) => `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
+
+  /**
+   * themePrecis : thème calculé à l'heure exacte (src/maisons.js), s'il existe ;
+   * sinon les transits utilisent le thème « midi TU » de la date de naissance.
+   */
+  function rendreTransits(date, naissance, themePrecis) {
     if (!naissance) {
       transitsCourants = [];
       $('transits').innerHTML = '<p class="aide-profil">Choisis un profil ou saisis une date de naissance pour afficher tes transits personnels.</p>';
       return;
     }
 
-    const res = TR.calculer(date, naissance);
+    const res = TR.calculer(date, themePrecis || naissance);
     transitsCourants = res.transits;
     const theme = res.themeNatal;
 
-    let html = `<div class="natal-resume"><small>Thème natal calculé au ${dateFr(versChamp(theme.date))} (midi TU)</small></div>`;
+    let html = theme.heurePrecise
+      ? `<div class="natal-resume"><small>Thème natal calculé à l’heure exacte : ${dateFr(versChamp(naissance))} à ${versHeureTU(theme.date)} TU</small></div>`
+      : `<div class="natal-resume"><small>Thème natal calculé au ${dateFr(versChamp(theme.date))} (midi TU)</small></div>`;
     if (theme.luneChangeDeSigne) {
       html += `<div class="avertissement-lune"><strong>À noter</strong> <div>${theme.avertissementLune}</div></div>`;
     }
@@ -567,6 +907,12 @@
     return p ? lireDate(p.naissance) : null;
   }
 
+  /** Le profil enregistré choisi dans le sélecteur (null pour « Aucun » ou « Autre date… »). */
+  function profilCourant() {
+    const choix = $('profil').value;
+    return choix && choix !== 'autre' ? P.obtenir(choix) : null;
+  }
+
   /** Remplit le sélecteur et montre le champ date seulement pour « Autre date… ». */
   function remplirSelecteur() {
     const actif = P.actif();
@@ -591,7 +937,7 @@
     $('liste-profils').innerHTML = liste.length
       ? liste.map((p) => `
         <li>
-          <span><strong>${echapper(p.nom)}</strong> <small>${dateFr(p.naissance)} · chemin de vie ${N.cheminDeVie(lireDate(p.naissance))}</small></span>
+          <span><strong>${echapper(p.nom)}</strong> <small>${dateFr(p.naissance)}${p.heure ? ' à ' + p.heure : ''}${p.lieu ? ', ' + echapper(p.lieu.nom) : ''} · chemin de vie ${N.cheminDeVie(lireDate(p.naissance))}</small></span>
           <span class="actions">
             <button type="button" class="lien" data-modifier="${p.id}">Modifier</button>
             ${suppressionDemandee === p.id
@@ -614,8 +960,8 @@
   }
 
   /** Télécharge un fichier sans serveur : un lien temporaire vers un Blob. */
-  function telecharger(nomFichier, contenu) {
-    const url = URL.createObjectURL(new Blob([contenu], { type: 'application/json' }));
+  function telecharger(nomFichier, contenu, type = 'application/json') {
+    const url = URL.createObjectURL(new Blob([contenu], { type }));
     const lien = Object.assign(document.createElement('a'), { href: url, download: nomFichier });
     document.body.append(lien);
     lien.click();
@@ -623,8 +969,22 @@
     URL.revokeObjectURL(url);
   }
 
+  /**
+   * Lit le lieu tapé dans le formulaire du panneau.
+   * Vide → null ; ville connue → copie de ses données ; inconnue → erreur explicite.
+   */
+  function lireLieu() {
+    const texte = $('profil-lieu').value.trim();
+    if (!texte) return null;
+    const ville = V.trouver(texte);
+    if (!ville) throw new Error(`Ville inconnue : « ${texte} ». Choisis-la dans la liste, ou la ville la plus proche.`);
+    return { ...ville };
+  }
+
   function initProfils() {
     remplirSelecteur();
+    // Suggestions des villes pendant la saisie (élément <datalist> natif).
+    $('liste-villes').innerHTML = V.VILLES.map((v) => `<option value="${echapper(V.libelle(v))}"></option>`).join('');
 
     $('profil').addEventListener('change', () => {
       P.choisirActif($('profil').value);
@@ -652,6 +1012,9 @@
         enEdition = p.id;
         $('profil-nom').value = p.nom;
         $('profil-naissance').value = p.naissance;
+        $('profil-heure').value = p.heure || '';
+        $('profil-lieu').value = p.lieu ? V.libelle(p.lieu) : '';
+        $('profil-nom-complet').value = p.nomComplet || '';
         $('titre-form').textContent = `Modifier ${p.nom}`;
         $('profil-valider').textContent = 'Enregistrer';
         $('profil-annuler').hidden = false;
@@ -670,8 +1033,14 @@
 
     $('form-profil').addEventListener('submit', (e) => {
       e.preventDefault();
-      const champs = { nom: $('profil-nom').value, naissance: $('profil-naissance').value };
       try {
+        const champs = {
+          nom: $('profil-nom').value,
+          naissance: $('profil-naissance').value,
+          heure: $('profil-heure').value || null,
+          lieu: lireLieu(),
+          nomComplet: $('profil-nom-complet').value,
+        };
         if (enEdition) {
           P.modifier(enEdition, champs);
         } else {
@@ -690,6 +1059,27 @@
 
     $('exporter').addEventListener('click', () =>
       telecharger(`toiles-profils-${versChamp(new Date())}.json`, P.exporter()));
+
+    // Import : le bouton ouvre le sélecteur de fichier ; le fichier est lu dans le
+    // navigateur (FileReader via file.text()), rien n'est envoyé nulle part.
+    $('importer').addEventListener('click', () => $('fichier-import').click());
+    $('fichier-import').addEventListener('change', async () => {
+      const fichier = $('fichier-import').files[0];
+      $('fichier-import').value = ''; // pour pouvoir réimporter le même fichier
+      if (!fichier) return;
+      const bilan = $('import-bilan');
+      bilan.hidden = false;
+      try {
+        const r = P.importer(await fichier.text());
+        const morceaux = [`${r.ajoutes.length} profil(s) ajouté(s)`];
+        if (r.doublons.length) morceaux.push(`${r.doublons.length} doublon(s) ignoré(s) : ${r.doublons.map(echapper).join(', ')}`);
+        if (r.invalides.length) morceaux.push(`${r.invalides.length} écarté(s) : ${r.invalides.map((x) => `${echapper(x.nom)} (${x.raison})`).join(', ')}`);
+        bilan.innerHTML = morceaux.join(' · ') + '.';
+        dessinerListe();
+      } catch (err) {
+        bilan.textContent = err.message;
+      }
+    });
   }
 
   // ===================== Méthodologie =====================
@@ -871,11 +1261,20 @@
     const pos = A.positions(date);
     rendreSynthese(date, pos);
     rendreCiel(date);
-    rendreCarteGeo(pos);
+    rendreCarteGeo([...pos, ...CP.positions(date)]);
     rendreCarteHelio(date);
-    rendreTransits(date, naissance);
+    const profil = profilCourant();
+    const theme = MS.calculer(profil);   // null sans heure ni lieu de naissance
+    rendreMaisons(theme, profil, $('domaine').value);
+    rendreTransits(date, naissance, theme && theme.theme);
     rendreCroisee(date, naissance, $('domaine').value);
     rendreLecon(date);
+    // v0.7 : cycles longs, nom, sidéral, calendrier, journal.
+    rendreCycles(date, naissance);
+    rendreNom(profil, $('domaine').value);
+    rendreSideral(date, pos);
+    rendreCalendrier(date, naissance);
+    rendreJournal(date, naissance);
   }
 
   // ===================== 5. Démarrage =====================
@@ -892,6 +1291,14 @@
   initProfils();
   initMethodologie();
   initFiches();
+  initCalendrier();
+  initJournal();
+  initQuiz();
+  // Choix de l'ayanamsa (comparaison sidérale), mémorisé comme le filtre.
+  $('ayanamsa').innerHTML = Object.entries(CP.AYANAMSAS)
+    .map(([cle, a]) => `<option value="${cle}">${a.nom}</option>`).join('');
+  $('ayanamsa').value = memoire.lire('toiles_ayanamsa', 'lahiri');
+  $('ayanamsa').addEventListener('change', () => { memoire.ecrire('toiles_ayanamsa', $('ayanamsa').value); rendre(); });
   // Le filtre et le sélecteur de profil ont leur propre écouteur : on ne redessine pas pour eux.
   $('form').addEventListener('input', (e) => { if (e.target.name !== 'vue' && e.target.id !== 'profil') rendre(); });
   rendre();

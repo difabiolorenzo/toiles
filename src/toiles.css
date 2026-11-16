@@ -198,6 +198,20 @@ button, input, select, textarea { font-family: inherit; }
   font-size: .83rem; color: var(--ink);
 }
 .aide-profil { color: var(--ink-muted); font-size: .9rem; font-style: italic; margin: .5rem 0; }
+
+/* ---------- Ascendant & maisons ---------- */
+/* AS et MC côte à côte (l'un sous l'autre sur téléphone). */
+.angles-theme { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); margin: 0 0 var(--space-2); font-size: 1.05rem; }
+.angles-theme .terme { color: var(--glyph); font-weight: 600; text-decoration: none; }
+.maisons-domaine { margin: var(--space-1) 0 var(--space-3); padding-left: 1.2rem; }
+.maisons-domaine li { margin: var(--space-1) 0; }
+.maisons-table th { text-align: left; font-size: 15px; font-weight: 500; color: var(--ink-muted); padding: var(--space-1); border-bottom: 1px solid var(--line); }
+/* Les deux maisons du domaine choisi : fond « track » (pas de couleur seule : elles sont aussi
+   nommées dans la liste au-dessus du tableau). */
+.maisons-table tr.maison-domaine td { background: var(--track); }
+.maisons-table td .terme { text-decoration: none; }
+.maisons-table td.num { text-align: left; }
+.maisons-table td.g { width: auto; letter-spacing: .15em; }
 .badge-transit {
   display: inline-block; font-size: .72rem; padding: .1rem .45rem; border-radius: 999px;
   margin-left: .3rem; font-weight: 500; vertical-align: middle; border: 1px solid var(--line);
@@ -419,3 +433,75 @@ button, input, select, textarea { font-family: inherit; }
 .correspondances { list-style: none; margin: 0; padding: 0; }
 .correspondances li { padding: var(--space-2) 0; border-bottom: 1px dotted var(--line); }
 .correspondances li:last-child { border-bottom: 0; }
+
+/* =====================================================================
+   v0.7 — Cycles longs, sidéral, calendrier, journal, quiz
+   Mêmes jetons que le reste : rien ne repose sur la couleur seule
+   (période en cours = mot « en cours » + fond track ; réponse juste = mot + bordure).
+   ===================================================================== */
+
+/* Petit sélecteur posé dans une carte ou un panneau (ayanamsa, thème du quiz). */
+.choix-carte { display: flex; align-items: center; gap: var(--space-2); font-size: 15px; color: var(--ink-muted); margin-bottom: var(--space-3); }
+.choix-carte select, .form-journal select, .form-journal textarea {
+  font: inherit; font-size: 1rem; padding: .35rem .5rem; border: 1px solid var(--ink-muted);
+  border-radius: var(--radius-sm); background: var(--bg); color: var(--ink); }
+
+/* Points complémentaires : plus discrets que les 9 astres sur la carte du ciel. */
+.schema-complement { fill: var(--ink-muted); font-size: 20px; }
+
+/* Cycles longs : frise des 9 années et période en cours. */
+.frise-neuf { display: grid; grid-template-columns: repeat(9, 1fr); gap: 2px; margin: var(--space-2) 0 var(--space-3); }
+.frise-neuf span { text-align: center; padding: var(--space-1) 0; border-radius: var(--radius-sm); background: var(--track);
+  color: var(--ink-muted); font-variant-numeric: tabular-nums; font-size: 15px; }
+.frise-neuf .passee { color: var(--ink); }
+.frise-neuf .actuelle { background: var(--pastille); color: var(--sur-pastille); font-weight: 600; }
+.periode-active { background: var(--track); border-radius: var(--radius-sm); padding-left: var(--space-2); padding-right: var(--space-2); }
+
+/* Calendrier : sur deux colonnes quand la grille en a la place. */
+@media (min-width: 680px) { .carte-large { grid-column: span 2; } }
+.cal-entete { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.cal-entete .heading { margin: 0; text-transform: capitalize; }
+.calendrier { width: 100%; border-collapse: collapse; table-layout: fixed; margin-top: var(--space-2); }
+.calendrier th { font-size: 13px; font-weight: 500; color: var(--ink-muted); padding: var(--space-1) 0; }
+.calendrier td { padding: 1px; vertical-align: top; }
+.cal-jour { width: 100%; min-height: 64px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  font: inherit; color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: var(--radius-sm);
+  padding: var(--space-1) 0; cursor: pointer; }
+.cal-jour:hover { background: var(--track); }
+.cal-choisi .cal-jour { border: 2px solid var(--focus); background: var(--track); }
+.cal-numero { font-size: 13px; color: var(--ink-muted); }
+.cal-note { font-style: normal; color: var(--glyph); font-size: 11px; margin-left: 2px; vertical-align: top; }
+.cal-nombre { font-size: 19px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.cal-lune { display: flex; align-items: center; gap: 2px; min-height: 14px; }
+.disque.mini { width: 12px; height: 12px; box-shadow: inset 0 0 0 1px var(--ink-muted); }
+.cal-lunaison { font-size: 12px; color: var(--glyph); }
+.cal-lunaisons { list-style: none; display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); margin: var(--space-3) 0 0; padding: 0; font-size: 15px; }
+@media (max-width: 480px) {
+  .cal-jour { min-height: 54px; }
+  .cal-nombre { font-size: 16px; }
+  .calendrier th { font-size: 11px; }
+}
+
+/* Journal de bord */
+.form-journal label { display: flex; flex-direction: column; gap: .25rem; font-size: 15px; color: var(--ink-muted); margin-bottom: var(--space-3); }
+.form-journal textarea { resize: vertical; min-height: 5rem; }
+.form-journal .actions { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; }
+.liste-journal { list-style: none; margin: 0; padding: 0; }
+.liste-journal li { padding: var(--space-2) 0; border-bottom: 1px dotted var(--line); }
+.liste-journal li:last-child { border-bottom: 0; }
+.liste-journal small { color: var(--ink-muted); }
+.liste-journal p { margin: var(--space-1) 0 0; color: var(--ink-muted); white-space: pre-line; }
+
+/* Quiz */
+#quiz-question .heading { margin: var(--space-2) 0 var(--space-4); }
+.quiz-choix { display: grid; gap: var(--space-2); }
+.quiz-reponse { font: inherit; text-align: left; padding: var(--space-3) var(--space-4); border: 1px solid var(--ink-muted);
+  border-radius: var(--radius-sm); background: var(--bg); color: var(--ink); cursor: pointer; }
+.quiz-reponse:hover:not(:disabled) { background: var(--track); }
+.quiz-reponse:disabled { cursor: default; }
+.quiz-reponse.juste { border: 2px solid var(--harmonie); font-weight: 600; }
+.quiz-reponse.juste::after { content: " ✓ bonne réponse"; color: var(--harmonie); font-weight: 500; }
+.quiz-reponse.fausse { border: 2px solid var(--tension); }
+.quiz-reponse.fausse::after { content: " ✗ ta réponse"; color: var(--tension); font-weight: 500; }
+#quiz-retour p { margin: var(--space-3) 0 0; }
+#quiz-retour .liens-fiche { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; }

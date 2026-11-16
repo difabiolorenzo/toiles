@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" font-family="Inter, 'Segoe UI', system-ui, sans-serif">
+  <!-- Bannière du README (thème clair). Mêmes couleurs que src/toiles.css. -->
+  <rect width="1200" height="300" rx="20" fill="#efe4cc"/>
+  <g stroke="#b08d4c" stroke-width="1" opacity=".6" fill="none">
+    <circle cx="1040" cy="150" r="110"/><circle cx="1040" cy="150" r="70"/>
+    <line x1="930" y1="150" x2="1150" y2="150"/><line x1="1040" y1="40" x2="1040" y2="260"/>
+  </g>
+  <g fill="#b08d4c"><circle cx="980" cy="70" r="3"/><circle cx="1120" cy="210" r="3"/><circle cx="1100" cy="80" r="2"/><circle cx="960" cy="230" r="2"/><circle cx="880" cy="60" r="2"/></g>
+  <g transform="translate(80 70) scale(2.5)">
+    <g stroke="#241b10" stroke-width="4" stroke-linecap="round">
+      <line x1="32" y1="6" x2="32" y2="58"/><line x1="9.5" y1="19" x2="54.5" y2="45"/><line x1="9.5" y1="45" x2="54.5" y2="19"/>
+    </g>
+    <circle cx="32" cy="32" r="8" fill="#efe4cc" stroke="#241b10" stroke-width="3"/>
+    <circle cx="32" cy="32" r="4" fill="#6e4f17"/>
+  </g>
+  <text x="290" y="160" font-size="84" font-weight="650" fill="#241b10" letter-spacing="-2">Toiles</text>
+  <text x="294" y="210" font-size="22" fill="#57452a">Apprendre la numérologie et l'astrologie, un jour à la fois</text>
+</svg>

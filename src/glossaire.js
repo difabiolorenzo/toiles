@@ -275,6 +275,103 @@
       detail: 'Il représente ton potentiel de départ, tes ressources et tes apprentissages de fond. C’est la référence fixe sur laquelle viennent résonner les transits quotidiens.',
       motsCles: ['carte de naissance', 'potentiel', 'fondation'],
     },
+    ascendant: {
+      categorie: 'notion',
+      titre: 'AS Ascendant',
+      court: 'Le degré du zodiaque qui se levait à l’horizon est au moment de ta naissance.',
+      detail: 'Il change de signe environ toutes les deux heures : il faut l’heure et le lieu exacts. On le lit comme ta manière d’aborder le monde, ton premier élan, l’image que tu donnes. C’est aussi le début de la maison I.',
+      motsCles: ['horizon', 'premier élan', 'apparence', 'maison I'],
+    },
+    milieuDuCiel: {
+      categorie: 'notion',
+      titre: 'MC Milieu du Ciel',
+      court: 'Le degré du zodiaque qui culminait au méridien (plein sud) au moment de ta naissance.',
+      detail: 'C’est le point le plus haut du thème, lu comme la vocation, la direction sociale, ce vers quoi tu tends. Il ouvre la maison X ; son opposé, le Fond du Ciel, ouvre la maison IV.',
+      motsCles: ['méridien', 'vocation', 'réputation', 'maison X'],
+    },
+    domification: {
+      categorie: 'notion',
+      titre: 'Domification',
+      court: 'Le découpage du ciel local de naissance en 12 maisons, chacune associée à un domaine de vie.',
+      detail: 'Il existe plusieurs systèmes. Toiles utilise Placidus, le plus répandu en France : il partage en trois le temps que met chaque degré pour monter de l’horizon au méridien. Au-delà des cercles polaires, Toiles passe en maisons égales (30° chacune depuis l’Ascendant).',
+      motsCles: ['maisons', 'Placidus', 'cuspide', 'ciel local'],
+    },
+    cuspide: {
+      categorie: 'notion',
+      titre: 'Cuspide',
+      court: 'Le début d’une maison : le degré du zodiaque où elle commence.',
+      detail: 'Le signe de la cuspide colore la façon de vivre le domaine de la maison. La cuspide I est l’Ascendant, la cuspide X le Milieu du Ciel.',
+    },
+
+    // =====================================================================
+    //  MAISONS (domification)
+    //  Clé : "maison" + numéro (maison1 … maison12). Le rattachement aux
+    //  6 domaines de Toiles est dans src/maisons.js (DOMAINES_MAISONS).
+    // =====================================================================
+    maison1: {
+      categorie: 'maison', titre: 'Maison I — Soi',
+      court: 'La personnalité visible, le corps, la façon d’entrer en contact avec le monde.',
+      detail: 'Elle commence à l’Ascendant. Les astres qui s’y trouvent marquent fortement le tempérament.',
+      motsCles: ['identité', 'élan', 'apparence'],
+    },
+    maison2: {
+      categorie: 'maison', titre: 'Maison II — Ressources',
+      court: 'L’argent gagné, les biens, les talents sur lesquels on s’appuie, le sentiment de sa valeur.',
+      motsCles: ['revenus', 'possessions', 'estime de soi'],
+    },
+    maison3: {
+      categorie: 'maison', titre: 'Maison III — Échanges',
+      court: 'La communication, les apprentissages, les déplacements courts, les frères et sœurs.',
+      motsCles: ['parole', 'école', 'entourage proche'],
+    },
+    maison4: {
+      categorie: 'maison', titre: 'Maison IV — Racines',
+      court: 'Le foyer, la famille d’origine, le besoin de sécurité intérieure.',
+      detail: 'Elle commence au Fond du Ciel, à l’opposé du Milieu du Ciel : le point le plus intime du thème.',
+      motsCles: ['foyer', 'famille', 'intimité'],
+    },
+    maison5: {
+      categorie: 'maison', titre: 'Maison V — Plaisirs',
+      court: 'Les amours, la créativité, le jeu, les enfants, ce qui fait battre le cœur.',
+      motsCles: ['amours', 'création', 'joie'],
+    },
+    maison6: {
+      categorie: 'maison', titre: 'Maison VI — Quotidien',
+      court: 'L’hygiène de vie, la santé au jour le jour, le travail quotidien et ses routines.',
+      motsCles: ['santé', 'routines', 'service'],
+    },
+    maison7: {
+      categorie: 'maison', titre: 'Maison VII — Couple',
+      court: 'Le partenaire, le mariage, les associations, la relation à l’autre en face de soi.',
+      detail: 'Elle commence au Descendant, à l’opposé de l’Ascendant : ce que l’on cherche chez l’autre.',
+      motsCles: ['couple', 'associations', 'contrats'],
+    },
+    maison8: {
+      categorie: 'maison', titre: 'Maison VIII — Transformations',
+      court: 'Les ressources partagées, les héritages, l’intimité profonde, les crises qui transforment.',
+      motsCles: ['partage', 'héritage', 'métamorphose'],
+    },
+    maison9: {
+      categorie: 'maison', titre: 'Maison IX — Horizons',
+      court: 'La philosophie, les études supérieures, les voyages lointains, la quête de sens.',
+      motsCles: ['sens', 'voyages', 'croyances'],
+    },
+    maison10: {
+      categorie: 'maison', titre: 'Maison X — Vocation',
+      court: 'La carrière, la réputation, la place dans la société, les ambitions.',
+      detail: 'Elle commence au Milieu du Ciel, le point le plus haut du thème.',
+      motsCles: ['carrière', 'statut', 'ambition'],
+    },
+    maison11: {
+      categorie: 'maison', titre: 'Maison XI — Idéaux',
+      court: 'Les amitiés, les projets collectifs, les espoirs et les idéaux.',
+      motsCles: ['amitiés', 'groupes', 'espérances'],
+    },
+    maison12: {
+      categorie: 'maison', titre: 'Maison XII — Retrait',
+      court: 'L’inconscient, le repos, les épreuves cachées, le besoin de solitude et de ressourcement.',
+      motsCles: ['inconscient', 'repos', 'retrait'],
+    },
 
     // =====================================================================
     //  ASTRES
@@ -722,6 +819,94 @@
       titre: 'Chemin de vie',
       court: 'Le nombre de ta date de naissance : la grande direction de ta vie.',
       detail: 'Jour, mois et année de naissance sont réduits séparément, puis additionnés et réduits à nouveau (maîtres-nombres conservés).',
+    },
+
+    // ---------- Cycles longs (v0.7) ----------
+    cycleNeufAns: {
+      categorie: 'notion',
+      titre: 'Cycle de 9 ans',
+      court: 'L’année personnelle parcourt 1 → 9 puis recommence : chaque année est une étape d’un même cycle.',
+      detail: 'L’année 1 ouvre (semer), la 5 bouscule (changer de cap), la 9 clôt (faire le bilan). Savoir où l’on en est dans le cycle aide à ne pas forcer une récolte en année 1 ni un départ en année 9.',
+    },
+    cycleDeVie: {
+      categorie: 'notion',
+      titre: 'Cycles de vie',
+      court: 'Trois grandes périodes tirées de la naissance : jeunesse (mois), maturité (jour), sagesse (année).',
+      detail: 'Chaque cycle colore une trentaine d’années, comme une toile de fond. Toiles fait coïncider ses bornes avec celles des pinacles (convention la plus répandue).',
+    },
+    pinacle: {
+      categorie: 'notion',
+      titre: 'Pinacle',
+      court: 'Un « sommet » de la vie : l’opportunité principale d’une période de plusieurs années.',
+      detail: 'Quatre pinacles se succèdent : le premier dure jusqu’à 36 ans moins le chemin de vie, les deux suivants 9 ans chacun, le dernier jusqu’au bout. Ils se calculent par additions des mois, jour et année de naissance réduits.',
+    },
+    defi: {
+      categorie: 'notion',
+      titre: 'Défi',
+      court: 'La difficulté à apprivoiser pendant un pinacle : une différence entre deux nombres de naissance.',
+      detail: 'Un défi va de 0 à 8. Le défi 0, dit « du choix », n’impose aucune leçon précise : il laisse libre de choisir laquelle travailler.',
+    },
+
+    // ---------- Nombres du nom (v0.7) ----------
+    expression: {
+      categorie: 'notion',
+      titre: 'Nombre d’expression',
+      court: 'La somme de toutes les lettres du nom de naissance : la façon d’agir, les talents mis en œuvre.',
+      detail: 'Chaque lettre vaut 1 à 9 (A = 1 … I = 9, J = 1…). Chaque mot du nom est réduit séparément, puis les mots sont additionnés : cela laisse apparaître les maîtres-nombres.',
+    },
+    elanSpirituel: {
+      categorie: 'notion',
+      titre: 'Élan spirituel',
+      court: 'La somme des voyelles du nom : ce qui motive en profondeur, l’aspiration intérieure.',
+      detail: 'Appelé aussi « nombre intime » ou « nombre de l’âme » selon les auteurs. Toiles compte Y comme une voyelle.',
+    },
+    moiIntime: {
+      categorie: 'notion',
+      titre: 'Moi intime',
+      court: 'La somme des consonnes du nom : le « moi » discret, l’image que l’on renvoie avant de se dévoiler.',
+      detail: 'Certains auteurs l’appellent « nombre de réalisation » ou « personnalité ». Les noms varient, le calcul (les consonnes seules) reste le même.',
+    },
+
+    // ---------- Points complémentaires du ciel (v0.7) ----------
+    pluton: {
+      categorie: 'notion',
+      titre: '♇ Pluton',
+      court: 'La transformation profonde, le pouvoir, ce qui meurt pour renaître ; jusqu’à 30 ans par signe.',
+      detail: 'Découvert en 1930, reclassé « planète naine » en 2006 mais toujours utilisé en astrologie. Son orbite très inclinée et allongée le fait rester de 12 à 31 ans dans un signe. Dans Toiles, il est affiché à part : il ne compte pas dans la teinte ni dans les aspects.',
+      motsCles: ['transformation', 'pouvoir', 'renaissance'],
+    },
+    chiron: {
+      categorie: 'notion',
+      titre: '⚷ Chiron',
+      court: 'La blessure qui devient source de soin : là où l’on a mal, et où l’on apprend à aider.',
+      detail: 'Petit corps découvert en 1977, entre Saturne et Uranus. Son orbite très excentrique le fait rester de 1 an et demi (Vierge, Balance) à 8 ans (Bélier, Poissons) dans un signe. Il porte le nom du centaure guérisseur, blessé sans pouvoir se soigner lui-même.',
+      motsCles: ['blessure', 'soin', 'transmission'],
+    },
+    noeudNord: {
+      categorie: 'notion',
+      titre: '☊ Nœud Nord',
+      court: 'Le point où la Lune croise l’écliptique en montant : la direction à développer, le pas à oser.',
+      detail: 'Ce n’est pas un astre mais un croisement d’orbites. Les nœuds reculent toujours dans le zodiaque (un tour en 18,6 ans) : leur ℞ permanent est normal. Les éclipses ont lieu près des nœuds.',
+      motsCles: ['direction', 'croissance', 'nouveauté'],
+    },
+    noeudSud: {
+      categorie: 'notion',
+      titre: '☋ Nœud Sud',
+      court: 'Le croisement opposé au Nœud Nord : les acquis, les habitudes confortables sur lesquelles on se repose.',
+      detail: 'Toujours exactement en face du Nœud Nord (+180°). La lecture classique invite à partir de ses acquis (Sud) pour aller vers sa direction (Nord), sans s’y enfermer.',
+      motsCles: ['acquis', 'habitudes', 'mémoire'],
+    },
+    sideral: {
+      categorie: 'notion',
+      titre: 'Zodiaque sidéral',
+      court: 'Un zodiaque calé sur les étoiles fixes, et non sur l’équinoxe de printemps comme le zodiaque tropical.',
+      detail: 'Utilisé surtout en astrologie indienne (jyotish). Les deux zodiaques ont coïncidé il y a environ 1 700 ans ; aujourd’hui, l’écart dépasse 24° : la plupart des astres changent de signe d’un zodiaque à l’autre.',
+    },
+    ayanamsa: {
+      categorie: 'notion',
+      titre: 'Ayanamsa',
+      court: 'L’écart (en degrés) entre zodiaque tropical et zodiaque sidéral ; il grandit de 50″ par an.',
+      detail: 'Il vient de la précession des équinoxes : l’axe de la Terre tourne lentement comme une toupie. Chaque école fixe son point de départ : Lahiri (Inde) ≈ 24°13′ en 2026, Fagan-Bradley (Occident) ≈ 25°06′.',
     },
   };
 
