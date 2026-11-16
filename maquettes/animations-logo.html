@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Animations du logo</title>
+<!-- Maquette autonome (v2, après retours) : pistes d'animation au clic sur « L'étoile tissée ».
+     Ouvrir en double-clic. Cliquer sur un logo pour (re)jouer son animation.
+     La variante « course réelle de Mercure » utilise le vrai calcul de Toiles (src/astres.js). -->
+<script src="../src/astres.js"></script>
+<style>
+:root {
+  --bg: #efe4cc; --surface: #f6eddb; --ink: #241b10; --ink-muted: #57452a;
+  --glyph: #523a10; --line: #b08d4c; --sun: #241b10; --accent: #6e4f17;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #080b1f; --surface: #0f1430; --ink: #f4f5ff; --ink-muted: #b8c0ff;
+    --glyph: #b8c0ff; --line: #4a5596; --sun: #ffd98a; --accent: #5b6cff;
+  }
+}
+body { margin: 0; background: var(--bg); color: var(--ink);
+  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 1100px; margin: 0 auto; padding: 32px 16px; }
+h1 { margin: 0 0 4px; font-size: 28px; }
+.intro { margin: 0 0 24px; color: var(--ink-muted); }
+.grille { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.carte { background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+  padding: 16px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.carte button { background: none; border: 0; padding: 8px; cursor: pointer; color: var(--ink); border-radius: 12px; }
+.carte button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.carte h2 { font-size: 17px; margin: 8px 0 4px; }
+.carte p { margin: 0; font-size: 14px; color: var(--ink-muted); }
+.carte .detail { margin-top: 6px; font-size: 12px; }
+.num { font-size: 12px; color: var(--ink-muted); letter-spacing: .08em; }
+
+/* ---------- Le logo (identique à index.html) ---------- */
+.logo { width: 96px; height: 96px; overflow: visible; }
+.logo * { transform-box: view-box; transform-origin: 32px 32px; }
+.coeur { fill: var(--surface); }
+.point { fill: var(--glyph); }
+.extra { opacity: 0; }
+
+/* Rotation céleste : un sixième de tour avec rebond. */
+.rotation.joue .fils { animation: tourner 1.1s cubic-bezier(.6,-0.3,.3,1.3); }
+@keyframes tourner { to { transform: rotate(60deg); } }
+
+/* Rotation rapide : trois tours, on lance fort puis ça freine et se pose. */
+.rapide.joue .fils { animation: tourbillon 1.4s cubic-bezier(.15,.8,.25,1.08); }
+@keyframes tourbillon { to { transform: rotate(1080deg); } }
+
+/* Battement : le point pulse et émet une onde. */
+.battement.joue .point { animation: battre .8s ease-in-out; }
+.battement.joue .onde { animation: onde 1s ease-out; }
+@keyframes battre { 30% { transform: scale(1.8); } 50% { transform: scale(1.1); } 65% { transform: scale(1.5); } }
+@keyframes onde { from { opacity: .8; transform: scale(.5); } to { opacity: 0; transform: scale(3.5); } }
+
+/* Orbite : deux mouvements superposés pour un rendu « organique » :
+   - le groupe tourne de deux tours (accélère puis ralentit) ;
+   - le point s'éloigne du centre en douceur, puis y revient en douceur.
+   Les deux courbes ne sont pas synchronisées : le point part en spirale. */
+.orbite.joue .orbite-rot { animation: orbiteTour 2.4s cubic-bezier(.45,0,.25,1); }
+.orbite.joue .orbite-rot .point { animation: orbiteRayon 2.4s ease-in-out; }
+@keyframes orbiteTour { to { transform: rotate(720deg); } }
+@keyframes orbiteRayon {
+  0%   { transform: translateY(0); }
+  30%  { transform: translateY(-20px); }
+  70%  { transform: translateY(-20px); }
+  100% { transform: translateY(0); }
+}
+
+/* Phases de Lune : le point grossit en pleine Lune, une ombre le traverse, il reprend sa taille. */
+.lune.joue .lune-groupe { animation: luneGrossit 2.2s ease-in-out; }
+.lune.joue .ombre-lune { animation: phase 2.2s ease-in-out; }
+.ombre-lune { fill: var(--surface); transform: translateX(-9px); }
+@keyframes luneGrossit { 15%, 85% { transform: scale(2.6); } }
+@keyframes phase { 0%, 15% { transform: translateX(-9px); } 85%, 100% { transform: translateX(9px); } }
+
+/* Éclipse : le disque est invisible au départ, opaque au centre (sur la Lune), invisible à la sortie. */
+.eclipse-carte.joue .eclipse { animation: eclipse 1.8s ease-in-out; }
+.eclipse-carte.joue .halo { animation: halo 1.8s ease-in-out; }
+.eclipse { fill: var(--ink); }
+.halo { fill: none; stroke: var(--sun); stroke-width: 2; }
+@keyframes eclipse {
+  0%   { opacity: 0; transform: translateX(-40px); }
+  50%  { opacity: 1; transform: translateX(0); }
+  100% { opacity: 0; transform: translateX(40px); }
+}
+@keyframes halo { 0%, 38% { opacity: 0; transform: scale(1); } 50% { opacity: 1; transform: scale(1.5); } 62%, 100% { opacity: 0; transform: scale(1.8); } }
+
+/* Corde pincée : chaque fil vibre comme une corde de harpe. */
+.corde.joue .fil { animation: vibrer .6s ease-out; }
+.corde.joue .fil:nth-child(2) { animation-delay: .08s; }
+.corde.joue .fil:nth-child(3) { animation-delay: .16s; }
+@keyframes vibrer { 20% { transform: scaleX(1.25); } 40% { transform: scaleX(.85); } 60% { transform: scaleX(1.1); } 80% { transform: scaleX(.95); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .joue * { animation: none !important; }
+  .joue { animation: fondu .6s; }
+  @keyframes fondu { 50% { opacity: .4; } }
+}
+</style>
+</head>
+<body>
+<main>
+  <h1>Animations du logo — v2</h1>
+  <p class="intro">Retenues ou retravaillées après vos retours. Cliquez sur un logo pour (re)jouer l'animation.
+    Le mode sombre suit le système.</p>
+  <div class="grille" id="grille"></div>
+</main>
+
+<script>
+/* ---------- Les trois rétrogradations : calculées en JS (Web Animations) ----------
+   Chaque fonction renvoie une liste d'angles (en degrés) que l'étoile parcourt.
+   On les convertit ensuite en images-clés pour element.animate(). */
+
+// a) Hasard : 3 à 5 pas, la plupart en avant, au moins un recul. Différent à chaque clic.
+function angleHasard() {
+  const angles = [0];
+  const nbPas = 3 + Math.floor(Math.random() * 3);
+  const pasRecul = 1 + Math.floor(Math.random() * (nbPas - 1));
+  for (let i = 0; i < nbPas; i++) {
+    const amplitude = 20 + Math.random() * 50;
+    const sens = i === pasRecul ? -0.6 : 1;
+    angles.push(angles[angles.length - 1] + sens * amplitude);
+  }
+  return angles;
+}
+
+// b) Mathématique : deux orbites circulaires (Terre et Mars) autour du Soleil.
+// Vue depuis la Terre, Mars semble reculer quand la Terre la double (opposition).
+// On échantillonne la direction Terre → Mars autour d'une opposition.
+function angleMathematique() {
+  const angles = [];
+  for (let k = 0; k <= 60; k++) {
+    const t = -0.35 + (0.7 * k) / 60;                 // en années, opposition à t = 0
+    const terre = 2 * Math.PI * t;                     // période 1 an, rayon 1
+    const mars = 2 * Math.PI * t / 1.881;              // période 1,881 an, rayon 1,524
+    const dx = 1.524 * Math.cos(mars) - Math.cos(terre);
+    const dy = 1.524 * Math.sin(mars) - Math.sin(terre);
+    angles.push(Math.atan2(dy, dx) * 180 / Math.PI);
+  }
+  return deroulerEtEtirer(angles, 200);
+}
+
+// c) Réel : la longitude de Mercure jour par jour sur les 120 prochains jours,
+// calculée par Toiles (src/astres.js). Mercure rétrograde environ tous les 116 jours,
+// donc la fenêtre en contient toujours une.
+function angleMercure() {
+  if (!globalThis.Toiles || !Toiles.astres) return angleMathematique();
+  const angles = [];
+  const debut = Date.now();
+  for (let jour = 0; jour <= 120; jour += 2) {
+    angles.push(Toiles.astres.longitude("mercure", new Date(debut + jour * 86400000)));
+  }
+  return deroulerEtEtirer(angles, 200);
+}
+
+// Rend une suite d'angles continue (pas de saut 359° → 0°), la fait partir de 0,
+// puis l'étire pour que l'amplitude totale soit visible (« amplitudeVoulue » degrés).
+function deroulerEtEtirer(angles, amplitudeVoulue) {
+  const continus = [angles[0]];
+  for (let i = 1; i < angles.length; i++) {
+    let ecart = angles[i] - angles[i - 1];
+    if (ecart > 180) ecart -= 360;
+    if (ecart < -180) ecart += 360;
+    continus.push(continus[i - 1] + ecart);
+  }
+  const min = Math.min(...continus), max = Math.max(...continus);
+  const echelle = amplitudeVoulue / (max - min || 1);
+  return continus.map((a) => (a - continus[0]) * echelle);
+}
+
+// Joue une suite d'angles sur les fils, puis revient à une position de repos
+// équivalente (multiple de 60° : l'étoile a une symétrie d'ordre 6).
+function jouerAngles(svg, angles, duree) {
+  const fin = angles[angles.length - 1];
+  const repos = Math.round(fin / 60) * 60;
+  const images = angles.concat(repos).map((a) => ({ transform: `rotate(${a}deg)` }));
+  svg.querySelector(".fils").animate(images, { duration: duree, easing: "ease-in-out" });
+}
+
+// Pour Mercure : le texte sous la carte indique la vraie fenêtre de dates.
+function detailMercure() {
+  const f = (d) => d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+  const debut = new Date(), fin = new Date(Date.now() + 120 * 86400000);
+  return `Fenêtre : ${f(debut)} → ${f(fin)} ${fin.getFullYear()}`;
+}
+
+/* ---------- Les pistes ---------- */
+// classe CSS, titre, idée, et éventuellement une fonction JS à la place du CSS.
+const animations = [
+  { classe: "rotation", titre: "Rotation céleste", idee: "Un sixième de tour avec rebond : l'étoile retombe exactement sur elle-même." },
+  { classe: "rapide", titre: "Rotation céleste — rapide", idee: "Trois tours lancés fort, qui freinent et se posent avec un léger dépassement." },
+  { classe: "battement", titre: "Battement", idee: "Le cœur bat deux fois et émet une onde : le rythme des cycles." },
+  { classe: "orbite", titre: "Orbite", idee: "Le point s'éloigne en spirale, fait deux tours, et revient doucement au centre." },
+  { classe: "retro", titre: "Rétrogradation — hasard", idee: "Avance et recule au hasard : chaque clic est différent.",
+    jouer: (svg) => jouerAngles(svg, angleHasard(), 1600) },
+  { classe: "retro", titre: "Rétrogradation — mathématique", idee: "Mars vue depuis la Terre (orbites circulaires) : la Terre la double, Mars semble reculer.",
+    jouer: (svg) => jouerAngles(svg, angleMathematique(), 2200) },
+  { classe: "retro", titre: "Rétrogradation — Mercure réelle", idee: "La vraie course de Mercure sur les 120 prochains jours, calculée par Toiles.",
+    detail: detailMercure, jouer: (svg) => jouerAngles(svg, angleMercure(), 2600) },
+  { classe: "lune", titre: "Phases de Lune", idee: "Le point s'arrondit en grande Lune, une ombre le traverse, puis il reprend sa place." },
+  { classe: "eclipse-carte", titre: "Éclipse", idee: "Un disque surgit de nulle part, devient opaque sur la Lune, puis s'efface ; un halo au maximum." },
+  { classe: "corde", titre: "Corde pincée", idee: "Chaque fil vibre comme une corde : l'harmonie des nombres (Pythagore)." },
+];
+
+// Le dessin du logo + les éléments supplémentaires (cachés) utiles à certaines pistes.
+function dessinLogo(classe, n) {
+  const point = classe === "lune"
+    ? `<g class="lune-groupe"><circle class="point" cx="32" cy="32" r="4"/>
+         <circle class="ombre-lune" cx="32" cy="32" r="4.3" clip-path="url(#clip-${n})"/></g>`
+    : classe === "orbite"
+      ? `<g class="orbite-rot"><circle class="point" cx="32" cy="32" r="4"/></g>`
+      : `<circle class="point" cx="32" cy="32" r="4"/>`;
+  return `
+  <svg class="logo ${classe}" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+    <defs><clipPath id="clip-${n}"><circle cx="32" cy="32" r="4"/></clipPath></defs>
+    <circle class="halo extra" cx="32" cy="32" r="10"/>
+    <g class="fils" stroke="currentColor" stroke-width="4" stroke-linecap="round">
+      <line class="fil" x1="32" y1="6" x2="32" y2="58"/>
+      <line class="fil" x1="9.5" y1="19" x2="54.5" y2="45"/>
+      <line class="fil" x1="9.5" y1="45" x2="54.5" y2="19"/>
+    </g>
+    <circle class="coeur" cx="32" cy="32" r="8"/>
+    <circle class="onde extra" cx="32" cy="32" r="6" stroke="currentColor" stroke-width="1.5"/>
+    ${point}
+    ${classe === "eclipse-carte" ? `<circle class="eclipse extra" cx="32" cy="32" r="9"/>` : ""}
+  </svg>`;
+}
+
+// Rejouer une animation CSS : retirer la classe, forcer un recalcul, la remettre.
+function jouerCss(svg) {
+  svg.classList.remove("joue");
+  void svg.getBoundingClientRect();
+  svg.classList.add("joue");
+}
+
+const grille = document.getElementById("grille");
+animations.forEach((anim, i) => {
+  const carte = document.createElement("div");
+  carte.className = "carte";
+  carte.innerHTML = `
+    <button type="button" aria-label="Jouer l'animation ${anim.titre}">${dessinLogo(anim.classe, i)}</button>
+    <span class="num">N° ${i + 1}</span><h2>${anim.titre}</h2><p>${anim.idee}</p>
+    ${anim.detail ? `<p class="detail">${anim.detail()}</p>` : ""}`;
+  const svg = carte.querySelector("svg");
+  carte.querySelector("button").addEventListener("click", () => {
+    const reduit = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (anim.jouer && !reduit) anim.jouer(svg); else jouerCss(svg);
+  });
+  grille.appendChild(carte);
+});
+</script>
+</body>
+</html>

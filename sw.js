@@ -19,7 +19,8 @@
  *   navigateurs à recharger les fichiers au lieu de garder l'ancienne copie.
  */
 
-const VERSION = 'toiles-v4'; // v4 : étalement en arc, cartes retournables, filtre Synthèse
+const VERSION = 'toiles-v5'; // v5 : animations du logo (src/logo.js)
+// v4 : étalement en arc, cartes retournables, filtre Synthèse
 
 // Tous les fichiers nécessaires à l'application (chemins relatifs au dossier du site).
 const FICHIERS = [
@@ -48,6 +49,7 @@ const FICHIERS = [
   'src/textes-tarot.js',
   'src/tarot.js',
   'src/app.js',
+  'src/logo.js',
   'images/logo.svg',
   'images/icones/icone-180.png',
   'images/icones/icone-192.png',

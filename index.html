@@ -26,15 +26,29 @@
       <!-- Logo « L'étoile tissée » : trois fils croisés, cœur évidé, point d'accent.
            Dessiné ici (et non chargé depuis images/logo.svg) pour suivre les jetons
            de couleur et le bouton de thème. -->
+      <!-- Un clic (et le démarrage) joue une animation tirée au hasard : voir src/logo.js.
+           Les éléments « logo-extra » sont invisibles hors animation. -->
+      <button type="button" class="bouton-logo" id="bouton-logo" aria-label="Animer le logo">
       <svg class="logo" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-        <g stroke="currentColor" stroke-width="4" stroke-linecap="round">
-          <line x1="32" y1="6" x2="32" y2="58"/>
-          <line x1="9.5" y1="19" x2="54.5" y2="45"/>
-          <line x1="9.5" y1="45" x2="54.5" y2="19"/>
+        <defs><clipPath id="logo-clip-lune"><circle cx="32" cy="32" r="4"/></clipPath></defs>
+        <circle class="logo-halo logo-extra" cx="32" cy="32" r="10"/>
+        <g class="logo-fils" stroke="currentColor" stroke-width="4" stroke-linecap="round">
+          <line class="logo-fil" x1="32" y1="6" x2="32" y2="58"/>
+          <line class="logo-fil" x1="9.5" y1="19" x2="54.5" y2="45"/>
+          <line class="logo-fil" x1="9.5" y1="45" x2="54.5" y2="19"/>
         </g>
         <circle class="logo-coeur" cx="32" cy="32" r="8"/>
-        <circle class="logo-point" cx="32" cy="32" r="4"/>
+        <circle class="logo-onde logo-extra" cx="32" cy="32" r="6" stroke="currentColor" stroke-width="1.5"/>
+        <!-- Groupes emboîtés : l'orbite fait tourner, la Lune fait grossir, le point se déplace. -->
+        <g class="logo-orbite">
+          <g class="logo-lune">
+            <circle class="logo-point" cx="32" cy="32" r="4"/>
+            <circle class="logo-ombre-lune" cx="32" cy="32" r="4.3" clip-path="url(#logo-clip-lune)"/>
+          </g>
+        </g>
+        <circle class="logo-eclipse logo-extra" cx="32" cy="32" r="9"/>
       </svg>
+      </button>
       Toiles
     </h1>
     <p class="label">Numérologie et dynamiques célestes</p>
@@ -255,6 +269,12 @@
         <button type="button" class="onglet" data-mode="intention" role="tab" aria-selected="false">Intention</button>
         <button type="button" class="onglet" data-mode="auto" role="tab" aria-selected="false">Automatique</button>
       </div>
+      <!-- Actions communes, juste sous les onglets : toujours visibles, quel que soit le mode. -->
+      <div class="tarot-ligne">
+        <button type="button" class="principal" id="tarot-vers-coupe">Coupe →</button>
+        <!-- Raccourci : saute la coupe et va directement choisir les cartes. -->
+        <button type="button" class="principal" id="tarot-vers-tirage">Tirage →</button>
+      </div>
       <!-- Les quatre modes sont superposés dans la même case : le bloc garde la hauteur
            du plus grand, donc changer d'onglet ne fait pas sauter la page. -->
       <div class="tarot-modes">
@@ -267,13 +287,12 @@
         </div>
       </div>
       <div class="tarot-mode" data-mode="etalement" hidden>
-        <p>Fais glisser les cartes pour les mêler, puis ramasse-les : elles sont reprises de haut en bas, de gauche à droite. Touche une carte sans la déplacer pour la retourner.</p>
-        <div class="tarot-table" id="tarot-table"></div>
+        <p>Fais glisser les cartes pour les mêler : le paquet suit leur ordre sur la table, de haut en bas, de gauche à droite. Touche une carte sans la déplacer pour la retourner.</p>
         <div class="tarot-ligne">
           <button type="button" class="lien" id="tarot-etaler">Étaler à nouveau</button>
           <button type="button" class="lien" id="tarot-retourner">Tout retourner</button>
-          <button type="button" class="principal" id="tarot-ramasser">Ramasser</button>
         </div>
+        <div class="tarot-table" id="tarot-table"></div>
       </div>
       <div class="tarot-mode" data-mode="intention" hidden>
         <p>Pense à ta question et garde le doigt appuyé aussi longtemps que tu veux. La durée de l’appui fixe le mélange.</p>
@@ -287,8 +306,6 @@
         <button type="button" class="principal" id="tarot-auto">Mélanger</button>
       </div>
       </div>
-      <p class="caption" id="tarot-historique"></p>
-      <button type="button" class="principal" id="tarot-vers-coupe">Passer à la coupe →</button>
     </section>
 
     <!-- Étape 2 : couper là où on clique. -->
@@ -364,6 +381,7 @@
   <script src="src/textes-tarot.js"></script>
   <script src="src/tarot.js"></script>
   <script src="src/app.js"></script>
+  <script src="src/logo.js"></script>
   <script>
     // Service worker (sw.js) : rend Toiles installable et disponible hors ligne.
     // Les navigateurs le refusent en file:// (double-clic) : on ne l'enregistre donc

@@ -141,3 +141,7 @@
 - [x] Audit de véracité : J2000.0 vs époque Schlyter, origine moderne de la numérologie « pythagoricienne », Cheiro (4 = Uranus, 7 = Neptune), précession, vitesses en 12 h (`src/astres.js`, `src/methodologie.js`, `src/numerologie.js`).
 - [x] Thème natal : avertissement quand le Soleil change de signe le jour de naissance (`themeNatal().avertissementSoleil`).
 - [x] Ciel du moment : dates des 4 prochaines phases principales (`astres.prochainesPhases`, testé contre mars 2025).
+
+### v0.10 — Logo animé
+- [x] Maquette des pistes d'animation (`maquettes/animations-logo.html`), retenues après retours.
+- [x] 10 animations du logo au démarrage et au clic, tirées au hasard sans répétition (`src/logo.js`, images-clés `anim-*` dans `src/toiles.css`) : rotation, rotation rapide, battement, orbite, 3 rétrogradations (hasard, Mars en orbites circulaires, Mercure réelle via `astres.longitude`), phases de Lune, éclipse, corde pincée. Désactivées si « réduire les animations ».

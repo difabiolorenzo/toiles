@@ -1295,7 +1295,6 @@
   const tarot = {
     paquet: [],      // le paquet courant, dessus = indice 0
     riffles: 0,      // nombre de mélanges « à la main » faits
-    historique: [],  // les gestes faits, pour les relire (« riffle n° 1, étalement… »)
     etalees: [],     // cartes posées sur la table (mode étalement) : { carte, x, y }
     tirees: [],      // cartes choisies dans l'éventail, dans l'ordre des positions
     debutAppui: 0,   // instant où l'appui « par intention » a commencé
@@ -1328,7 +1327,6 @@
   function nouveauTirage() {
     tarot.paquet = X.paquetDe($('tarot-jeu').value);
     tarot.riffles = 0;
-    tarot.historique = [];
     tarot.tirees = [];
     noteJeu();
     $('tarot-duree').textContent = '';
@@ -1341,12 +1339,6 @@
     for (const e of ['melange', 'coupe', 'tirage']) $('tarot-etape-' + e).hidden = e !== etape;
   }
 
-  /** Note un geste dans l'historique et met à jour les indications. */
-  function noterGeste(geste) {
-    tarot.historique.push(geste);
-    dessinerMelange();
-  }
-
   function dessinerMelange() {
     // La pile : quelques dos de cartes décalés, juste pour l'œil.
     $('tarot-pile').innerHTML = '<span class="tarot-dos"></span>'.repeat(5);
@@ -1357,9 +1349,6 @@
       compteur += n >= conseil ? ' ✓ bien mélangé' : ` (≈ ${conseil} conseillés)`;
     }
     $('tarot-compteur').textContent = compteur;
-    $('tarot-historique').textContent = tarot.historique.length
-      ? 'Gestes faits : ' + tarot.historique.join(', ') + '.'
-      : 'Le paquet est encore rangé dans l’ordre.';
   }
 
   // --- Mode « à la main » : un riffle par clic, avec une petite secousse de la pile.
@@ -1370,7 +1359,7 @@
     pile.classList.remove('secoue');
     void pile.offsetWidth; // force le navigateur à « oublier » l'animation pour la rejouer
     pile.classList.add('secoue');
-    noterGeste(`riffle n° ${tarot.riffles}`);
+    dessinerMelange();
     etalerTable(); // la table reflète le nouvel ordre
   }
 
@@ -1440,18 +1429,18 @@
       enCours.element.style.top = enCours.e.y * 100 + '%';
     });
     // Lâcher : si la carte a bougé de moins de 5 px, c'était un toucher : on la retourne.
+    // Sinon, c'était un déplacement : le paquet est aussitôt « ramassé » dans l'ordre
+    // de la table (haut → bas, gauche → droite). Pas de bouton à penser : l'ordre du
+    // paquet suit toujours ce que tu vois. La table, elle, reste telle quelle.
     table.addEventListener('pointerup', (ev) => {
-      if (enCours && Math.hypot(ev.clientX - enCours.x0, ev.clientY - enCours.y0) < 5)
+      if (!enCours) return;
+      if (Math.hypot(ev.clientX - enCours.x0, ev.clientY - enCours.y0) < 5)
         retournerCarte(Number(enCours.element.dataset.i));
+      else
+        tarot.paquet = X.ramasser(tarot.etalees);
       enCours = null;
     });
     table.addEventListener('pointercancel', () => { enCours = null; });
-  }
-
-  function ramasserTable() {
-    tarot.paquet = X.ramasser(tarot.etalees);
-    noterGeste('étalement');
-    etalerTable();
   }
 
   // --- Mode « intention » : on mesure la durée de l'appui.
@@ -1472,7 +1461,6 @@
     $('tarot-appui').classList.remove('appuye');
     tarot.paquet = X.parIntention(tarot.paquet, duree);
     $('tarot-duree').textContent = `${(duree / 1000).toFixed(2)} s → paquet mélangé`;
-    noterGeste(`intention (${Math.round(duree)} ms)`);
     etalerTable();
   }
 
@@ -1488,7 +1476,6 @@
   function couperA(position) {
     if (position) {
       tarot.paquet = X.couper(tarot.paquet, position);
-      tarot.historique.push(`coupe à ${position}`);
     }
     // Les renversées sont décidées ici, une fois le paquet prêt (option).
     if ($('tarot-renversees').checked) tarot.paquet = X.renverser(tarot.paquet);
@@ -1585,16 +1572,15 @@
     brancherTable();
     $('tarot-etaler').addEventListener('click', etalerTable);
     $('tarot-retourner').addEventListener('click', toutRetourner);
-    $('tarot-ramasser').addEventListener('click', ramasserTable);
     $('tarot-appui').addEventListener('pointerdown', debutAppui);
     for (const fin of ['pointerup', 'pointerleave', 'pointercancel']) $('tarot-appui').addEventListener(fin, finAppui);
     $('tarot-auto').addEventListener('click', () => {
       tarot.paquet = X.melanger(tarot.paquet);
-      noterGeste('automatique');
       etalerTable();
     });
 
     $('tarot-vers-coupe').addEventListener('click', dessinerCoupe);
+    $('tarot-vers-tirage').addEventListener('click', () => couperA(0)); // sans coupe
     $('tarot-tranche').addEventListener('click', (e) => {
       const f = e.target.closest('[data-coupe]');
       if (f) couperA(Number(f.dataset.coupe));

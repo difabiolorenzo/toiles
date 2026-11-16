@@ -133,6 +133,61 @@ button, input, select, textarea { font-family: inherit; }
 .logo-coeur { fill: var(--bg); transition: fill .4s; }
 .logo-point { fill: var(--glyph); }
 @media (max-width: 560px) { .logo { width: 32px; height: 32px; } }
+
+/* ---------- Animations du logo (déclenchées par src/logo.js) ----------
+   Le logo est dans un bouton : clic = une animation tirée au hasard.
+   Toutes les transformations tournent autour du centre du dessin (32, 32). */
+.bouton-logo { background: none; border: 0; padding: 0; margin: 0; color: inherit; cursor: pointer;
+  display: inline-flex; border-radius: var(--radius-sm); }
+.bouton-logo:focus-visible { outline: 2px solid var(--focus); outline-offset: 4px; }
+.logo { overflow: visible; }
+.logo * { transform-box: view-box; transform-origin: 32px 32px; }
+.logo-extra { opacity: 0; }
+.logo-ombre-lune { fill: var(--bg); transform: translateX(-9px); transition: fill .4s; }
+.logo-halo { fill: none; stroke: var(--sun); stroke-width: 2; }
+.logo-eclipse { fill: var(--ink); }
+
+/* Rotation céleste : un sixième de tour avec rebond (l'étoile retombe sur elle-même). */
+.anim-rotation .logo-fils { animation: logo-tourner 1.1s cubic-bezier(.6,-0.3,.3,1.3); }
+@keyframes logo-tourner { to { transform: rotate(60deg); } }
+
+/* Rotation rapide : trois tours lancés fort, qui freinent et se posent. */
+.anim-rapide .logo-fils { animation: logo-tourbillon 1.4s cubic-bezier(.15,.8,.25,1.08); }
+@keyframes logo-tourbillon { to { transform: rotate(1080deg); } }
+
+/* Battement : le point bat deux fois et envoie une onde. */
+.anim-battement .logo-point { animation: logo-battre .8s ease-in-out; }
+.anim-battement .logo-onde { animation: logo-onde 1s ease-out; }
+@keyframes logo-battre { 30% { transform: scale(1.8); } 50% { transform: scale(1.1); } 65% { transform: scale(1.5); } }
+@keyframes logo-onde { from { opacity: .8; transform: scale(.5); } to { opacity: 0; transform: scale(3.5); } }
+
+/* Orbite : deux tours (groupe) + éloignement puis retour en douceur (point) : une spirale. */
+.anim-orbite .logo-orbite { animation: logo-orbite-tour 2.4s cubic-bezier(.45,0,.25,1); }
+.anim-orbite .logo-point { animation: logo-orbite-rayon 2.4s ease-in-out; }
+@keyframes logo-orbite-tour { to { transform: rotate(720deg); } }
+@keyframes logo-orbite-rayon { 30%, 70% { transform: translateY(-20px); } }
+
+/* Phases de Lune : le point grossit, une ombre le traverse, il reprend sa taille. */
+.anim-lune .logo-lune { animation: logo-lune-grossit 2.2s ease-in-out; }
+.anim-lune .logo-ombre-lune { animation: logo-phase 2.2s ease-in-out; }
+@keyframes logo-lune-grossit { 15%, 85% { transform: scale(2.6); } }
+@keyframes logo-phase { 0%, 15% { transform: translateX(-9px); } 85%, 100% { transform: translateX(9px); } }
+
+/* Éclipse : disque invisible à l'entrée, opaque au centre, invisible à la sortie ; halo au maximum. */
+.anim-eclipse .logo-eclipse { animation: logo-eclipse 1.8s ease-in-out; }
+.anim-eclipse .logo-halo { animation: logo-halo 1.8s ease-in-out; }
+@keyframes logo-eclipse {
+  0%   { opacity: 0; transform: translateX(-40px); }
+  50%  { opacity: 1; transform: translateX(0); }
+  100% { opacity: 0; transform: translateX(40px); }
+}
+@keyframes logo-halo { 0%, 38% { opacity: 0; transform: scale(1); } 50% { opacity: 1; transform: scale(1.5); } 62%, 100% { opacity: 0; transform: scale(1.8); } }
+
+/* Corde pincée : chaque fil vibre comme une corde de harpe. */
+.anim-corde .logo-fil { animation: logo-vibrer .6s ease-out; }
+.anim-corde .logo-fil:nth-child(2) { animation-delay: .08s; }
+.anim-corde .logo-fil:nth-child(3) { animation-delay: .16s; }
+@keyframes logo-vibrer { 20% { transform: scaleX(1.25); } 40% { transform: scaleX(.85); } 60% { transform: scaleX(1.1); } 80% { transform: scaleX(.95); } }
 .entete p { margin: var(--space-1) 0 0; }
 .entete-outils { display: flex; justify-content: flex-end; max-width: 1200px; margin: 0 auto;
   padding: var(--space-4) var(--space-4) 0; }
@@ -526,7 +581,7 @@ button, input, select, textarea { font-family: inherit; }
 .tarot-aide p { font-size: 15px; line-height: 22px; }
 .tarot-etape p { margin: var(--space-2) 0; }
 .tarot-ligne { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; margin: var(--space-3) 0; }
-#tarot-vers-coupe { margin-top: var(--space-2); }
+#tarot-vers-coupe, #tarot-vers-tirage { flex-shrink: 0; }
 .tarot-etape [hidden] { display: none; }
 
 /* Hauteur fixe du panneau tarot : il ne change pas de taille d'une étape à l'autre ;
@@ -538,7 +593,6 @@ button, input, select, textarea { font-family: inherit; }
 .tarot-modes { display: grid; }
 /* Textes qui changent après chaque geste : place réservée (2 lignes) pour qu'ils
    ne poussent pas les boutons en passant d'une à deux lignes. */
-#tarot-historique { min-height: 44px; }
 #tarot-compteur, #tarot-duree { min-width: 12em; }
 .tarot-modes > .tarot-mode { grid-area: 1 / 1; }
 .tarot-modes > .tarot-mode[hidden] { display: block; visibility: hidden; }
