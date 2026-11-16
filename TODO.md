@@ -68,7 +68,7 @@
 - [x] Bouton de thème (`index.html`, `src/theme.js` chargé dans le `<head>` pour éviter le flash, branché dans `src/app.js`) — pilule `ink-muted`, libellé « Passer en thème sombre / clair », `data-theme` sur `<html>`, choix mémorisé en localStorage dans un `try/catch`, anneau `focus` 2px
 - [x] Police Inter locale — Inter 4.1 variable (rsms/inter) dans `polices/` (`InterVariable.woff2`, `-Italic`, licence OFL jointe) ; `@font-face` dans `src/toiles.css` (`local()` d'abord, repli système) (woff2 300–600, licence OFL jointe), `@font-face` dans `src/toiles.css`, graisse 450 en clair / 400 en sombre ; vérifier le chargement en double-clic (`file://`)
 - [x] Échelle typographique — classes `numeral`, `title`, `heading`, `body`, `data`, `label`, `caption` ; en-tête « ✶ Toiles » en `title` (fin des majuscules espacées en `--accent`)
-- [x] Synthèse du jour (nouveau composant pleine largeur en tête de la grille) — teinte = élément dominant parmi les astres, barre de proportion (`track` / `accent`), nombre du jour en `numeral` avec son addition en `caption` (`1+5+1+1+2+0+2+6 = 18 → 9`), tendance, Lune (disque `track`, partie éclairée `planet`) ; étoiles scintillantes en thème sombre seulement, figées si `prefers-reduced-motion` ; Lune masquée sous 560px ; calcul de la teinte dans `src/astres.js` (`teinteDuJour()`, un astre = 1, départage par le poids) + test ; l'addition suit la cascade du jour universel (`additionDuJour()` dans `src/numerologie.js`, pas la somme brute des chiffres qui diverge avec les maîtres-nombres) ; tendance = mot de l'élément (`tendances` dans `src/textes.js`) ; reste toujours visible quel que soit le filtre
+- [x] Synthèse du jour (nouveau composant pleine largeur en tête de la grille) — teinte = élément dominant parmi les astres, barre de proportion (`track` / `accent`), nombre du jour en `numeral` avec son addition en `caption` (`1+5+1+1+2+0+2+6 = 18 → 9`), tendance, Lune (disque `track`, partie éclairée `planet`) ; étoiles scintillantes en thème sombre seulement, figées si `prefers-reduced-motion` ; Lune masquée sous 560px ; calcul de la teinte dans `src/astres.js` (`teinteDuJour()`, un astre = 1, départage par le poids) + test ; l'addition suit la cascade du jour universel (`additionDuJour()` dans `src/numerologie.js`, pas la somme brute des chiffres qui diverge avec les maîtres-nombres) ; tendance = mot de l'élément (`tendances` dans `src/textes.js`) ; filtrable comme les autres sections (choix « Synthèse » du filtre)
 - [x] Table des positions — glyphe en `glyph`, nom en `ink`, position en `data` à droite, degrés entiers dans le texte (décimales réservées aux vues techniques), séparateurs pointillés `line`, ℞ en `glyph` avec `title="rétrograde"` (remplace `.retro` en `--tension`)
 - [x] Carte géocentrique (SVG généré dans `src/app.js`, géométrie pure dans `src/schemas.js` : `carteGeocentrique()`, `niveauxDeRecul()`) — Terre au centre, anneau de 12 signes, Bélier 0° à gauche, sens antihoraire ; astres à moins de 12° décalés de 28px vers l'intérieur avec trait `ink-muted` vers leur degré ; `<title>` (nom, position, ℞) sur chaque glyphe
 - [x] Carte héliocentrique — Soleil au centre, orbites pointillées régulières (`line`, tirets 3/4), Terre en `earth` plus grosse, même orientation ; note « distances non à l'échelle » obligatoire ; `positionsHeliocentriques()` dans `src/astres.js` (Terre = Soleil + 180°), testé sur les oppositions de Mars 01/2025, Saturne 09/2025, Jupiter 01/2026 ; 8 orbites (jusqu'à Neptune)
@@ -117,3 +117,27 @@
 - [ ] Lecture des points complémentaires — textes « Pluton / Chiron / nœuds en signe » et transits de ces points (aujourd'hui : position seule, sans interprétation)
 - [ ] Nœud vrai — proposer le nœud vrai à côté du nœud moyen (termes périodiques de Meeus 47)
 - [ ] Import du journal — recharger un export `.json` du journal (même logique de doublons que les profils)
+
+### v0.8 - Tirage tarot / oracle
+- [x] choix du paquet : 22 arcanes majeurs d'abord (Marseille / Rider-Waite, numérotation Force/Justice propre à chacun, XIII sans nom à Marseille), mineurs ensuite ; données dans `src/textes-tarot.js`
+- [x] cartes typographiques (numéro, nom, mot-clé) en CSS
+- [x] scans domaine public (RWS 1909, Conver 1760) en option « Images d'époque », copiés dans `images/tarot/<jeu>/<cle>.jpg` (Wikimedia Commons), crédit dans `TT.jeux[jeu].scans`
+- [x] mise en page stable du panneau tarot : hauteur fixe, modes de mélange superposés (`.tarot-modes`), emplacements vides par position, éventail grisé au lieu de masqué
+- [x] étalement en arc de cercle (`etalerEnArc`, disposition de départ seulement) ; toucher une carte la retourne, bouton « Tout retourner »
+- [x] calcul pur dans `src/tarot.js` (sans DOM) + tests : aucune carte perdue ni en double
+- [x] mélange 1 « à la main » : `riffle` (coupe imprécise + entrelacement 1-3 cartes), compteur de mélanges (≈ 7 riffles suffisent, Bayer-Diaconis)
+- [x] mélange 2 « par étalement » : cartes face cachée en vrac, glissées au doigt / à la souris, puis ramassées
+- [x] mélange 3 « par intention » : durée de l'appui maintenu = graine du mélange (Fisher-Yates)
+- [x] mélange automatique (bouton rapide, Fisher-Yates + `crypto.getRandomValues`)
+- [x] coupe : clic / glisser à l'endroit choisi, le dessous passe dessus (`couper`)
+- [x] tirage : cartes en éventail face cachée, choisies une à une par l'utilisateur (`tirer`)
+- [x] option cartes renversées (désactivée par défaut, mot-clé « renversé »)
+- [x] différents tirages : 1 carte, 3 cartes (passé/présent/futur), croix (5) ; positions nommées mais pas d'interprétation propre au tirage = seulement mots-clés de la carte
+- [x] infobulle « Comment ça marche » : les mélanges, la coupe, honnêteté sur le hasard
+- [ ] arcanes mineurs (56 cartes, couleur ↔ domaine)
+- [ ] sauvegarde des tirages dans le profil (`localStorage`)
+
+### v0.9 — Véracité & ciel du moment
+- [x] Audit de véracité : J2000.0 vs époque Schlyter, origine moderne de la numérologie « pythagoricienne », Cheiro (4 = Uranus, 7 = Neptune), précession, vitesses en 12 h (`src/astres.js`, `src/methodologie.js`, `src/numerologie.js`).
+- [x] Thème natal : avertissement quand le Soleil change de signe le jour de naissance (`themeNatal().avertissementSoleil`).
+- [x] Ciel du moment : dates des 4 prochaines phases principales (`astres.prochainesPhases`, testé contre mars 2025).

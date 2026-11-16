@@ -38,7 +38,8 @@
   //  CASCADE DES PÉRIODES (NOMBRES UNIVERSELS ET PERSONNELS)
   //
   //  Pourquoi une « cascade » en numérologie ?
-  //  Dans la tradition pythagoricienne, le temps n'est pas une succession
+  //  Dans la numérologie moderne (convention du XXe siècle, malgré le nom
+  //  « pythagoricienne »), le temps n'est pas une succession
   //  d'instants découpés arbitrairement, mais une suite de cycles emboîtés
   //  comme des poupées russes. Un cycle court s'exprime toujours à l'intérieur
   //  du climat du cycle plus vaste qui l'englobe :

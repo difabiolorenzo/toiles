@@ -217,6 +217,7 @@
       date: instant, annee: a, mois: m, jour: j,
       positions, aspects: A.aspects(positions),
       heurePrecise: true, luneChangeDeSigne: false, avertissementLune: null,
+      soleilChangeDeSigne: false, avertissementSoleil: null,
     };
     return { ...ang, conversion, theme, maisons };
   }

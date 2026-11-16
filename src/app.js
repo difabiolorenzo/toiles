@@ -60,8 +60,8 @@
   /** Montre les cartes dont data-module correspond au choix ("tout" = toutes). */
   function appliquerFiltre(choix) {
     document.querySelectorAll('.carte[data-module]').forEach((carte) => {
-      // La Synthèse du jour reste toujours visible : c'est le résumé de tout le reste.
-      carte.hidden = choix !== 'tout' && carte.dataset.module !== 'synthese' && carte.dataset.module !== choix;
+      // La Synthèse du jour est une section comme les autres (choix « Synthèse »).
+      carte.hidden = choix !== 'tout' && carte.dataset.module !== choix;
     });
   }
 
@@ -327,6 +327,11 @@
     $('lune').innerHTML = `
       <span class="disque" style="--ill:${dyn.lune.illumination};--sens:${dyn.lune.croissante ? 1 : -1}"></span>
       <div><strong>${terme('phase', dyn.lune.nom)}</strong><br>${pct(dyn.lune.illumination)} éclairée</div>`;
+
+    // Prochaines phases principales : date et heure locales de l'appareil.
+    const formatPhase = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+    $('prochaines-phases').innerHTML = '<h3>Prochaines phases</h3><ul class="prochaines-phases">' +
+      A.prochainesPhases(date).map((p) => `<li><strong>${p.nom}</strong> — ${formatPhase.format(p.date)}</li>`).join('') + '</ul>';
 
     // Positions
     // Chaque symbole et chaque nom ouvre sa définition (glossaire).
@@ -862,6 +867,9 @@
     let html = theme.heurePrecise
       ? `<div class="natal-resume"><small>Thème natal calculé à l’heure exacte : ${dateFr(versChamp(naissance))} à ${versHeureTU(theme.date)} TU</small></div>`
       : `<div class="natal-resume"><small>Thème natal calculé au ${dateFr(versChamp(theme.date))} (midi TU)</small></div>`;
+    if (theme.soleilChangeDeSigne) {
+      html += `<div class="avertissement-lune"><strong>À noter</strong> <div>${theme.avertissementSoleil}</div></div>`;
+    }
     if (theme.luneChangeDeSigne) {
       html += `<div class="avertissement-lune"><strong>À noter</strong> <div>${theme.avertissementLune}</div></div>`;
     }
@@ -1277,6 +1285,328 @@
     rendreJournal(date, naissance);
   }
 
+  // ===================== Tarot (v0.8) =====================
+  // Le calcul (mélanges, coupe, tirage) est dans src/tarot.js ; ici on ne fait
+  // que dessiner et réagir aux gestes. Tout l'état du tirage en cours tient
+  // dans l'objet `tarot` ci-dessous.
+
+  const X = window.Toiles.tarot, TT = window.Toiles.textesTarot;
+  const textesCarte = Object.fromEntries(TT.majeurs.map((c) => [c.cle, c]));
+  const tarot = {
+    paquet: [],      // le paquet courant, dessus = indice 0
+    riffles: 0,      // nombre de mélanges « à la main » faits
+    historique: [],  // les gestes faits, pour les relire (« riffle n° 1, étalement… »)
+    etalees: [],     // cartes posées sur la table (mode étalement) : { carte, x, y }
+    tirees: [],      // cartes choisies dans l'éventail, dans l'ordre des positions
+    debutAppui: 0,   // instant où l'appui « par intention » a commencé
+    minuterie: 0,    // affichage de la durée pendant l'appui
+  };
+
+  /** Une carte face visible : numéro romain, nom, mot-clé.
+   *  Option « Images d'époque » : le scan du jeu choisi (images/tarot/<jeu>/<cle>.jpg)
+   *  remplace le cadre typographique ; le nom et le mot-clé restent écrits dessous
+   *  car les scans portent des noms anciens (ou anglais pour le RWS). */
+  function faceTarot(carte) {
+    const t = textesCarte[carte.cle];
+    if ($('tarot-scans').checked) {
+      const jeu = $('tarot-jeu').value;
+      return `<figure class="tarot-scan${carte.renversee ? ' renversee' : ''}">
+        <img src="images/tarot/${jeu}/${carte.cle}.jpg" alt="${carte.nom}" loading="lazy">
+        <figcaption><span class="tarot-num">${X.romain(carte.numero)}</span> ${carte.nom}
+          <span class="tarot-mot">${t.motCle}</span></figcaption>
+      </figure>`;
+    }
+    const classe = carte.renversee ? 'tarot-carte renversee' : 'tarot-carte';
+    return `<div class="${classe}">
+      <span class="tarot-num">${X.romain(carte.numero)}</span>
+      <strong>${carte.nom}</strong>
+      <span class="tarot-mot">${t.motCle}</span>
+    </div>`;
+  }
+
+  /** Repart d'un paquet neuf, rangé dans l'ordre du jeu choisi. */
+  function nouveauTirage() {
+    tarot.paquet = X.paquetDe($('tarot-jeu').value);
+    tarot.riffles = 0;
+    tarot.historique = [];
+    tarot.tirees = [];
+    noteJeu();
+    $('tarot-duree').textContent = '';
+    montrerEtape('melange');
+    dessinerMelange();
+    etalerTable();
+  }
+
+  function montrerEtape(etape) {
+    for (const e of ['melange', 'coupe', 'tirage']) $('tarot-etape-' + e).hidden = e !== etape;
+  }
+
+  /** Note un geste dans l'historique et met à jour les indications. */
+  function noterGeste(geste) {
+    tarot.historique.push(geste);
+    dessinerMelange();
+  }
+
+  function dessinerMelange() {
+    // La pile : quelques dos de cartes décalés, juste pour l'œil.
+    $('tarot-pile').innerHTML = '<span class="tarot-dos"></span>'.repeat(5);
+    const n = tarot.riffles, conseil = X.RIFFLES_CONSEILLES;
+    let compteur = '';
+    if (n > 0) {
+      compteur = n + (n > 1 ? ' mélanges' : ' mélange');
+      compteur += n >= conseil ? ' ✓ bien mélangé' : ` (≈ ${conseil} conseillés)`;
+    }
+    $('tarot-compteur').textContent = compteur;
+    $('tarot-historique').textContent = tarot.historique.length
+      ? 'Gestes faits : ' + tarot.historique.join(', ') + '.'
+      : 'Le paquet est encore rangé dans l’ordre.';
+  }
+
+  // --- Mode « à la main » : un riffle par clic, avec une petite secousse de la pile.
+  function brasser() {
+    tarot.paquet = X.riffle(tarot.paquet);
+    tarot.riffles++;
+    const pile = $('tarot-pile');
+    pile.classList.remove('secoue');
+    void pile.offsetWidth; // force le navigateur à « oublier » l'animation pour la rejouer
+    pile.classList.add('secoue');
+    noterGeste(`riffle n° ${tarot.riffles}`);
+    etalerTable(); // la table reflète le nouvel ordre
+  }
+
+  // --- Mode « étalement » : cartes en vrac, déplacées au doigt ou à la souris.
+  // Marges : une carte posée à x = 0,88 ou y = 0,75 touche encore le bord sans déborder.
+  const BORD_X = 0.88, BORD_Y = 0.75;
+
+  // Les cartes sont posées en arc de cercle (src/tarot.js : etalerEnArc), face cachée.
+  // visible : la carte a été retournée sur la table (simple coup d'œil : le paquet
+  // ramassé repart face cachée).
+  function etalerTable() {
+    tarot.etalees = X.etalerEnArc(tarot.paquet)
+      .map((e) => ({ ...e, x: e.x * BORD_X, y: e.y * BORD_Y, visible: false }));
+    dessinerTable();
+  }
+
+  /** Une carte de la table : dos rayé, ou face (scan, ou numéro romain) si retournée. */
+  function carteTable(e, i) {
+    const style = `left:${e.x * 100}%;top:${e.y * 100}%;transform:rotate(${e.angle.toFixed(1)}deg)`;
+    if (!e.visible) return `<span class="tarot-dos tarot-libre" data-i="${i}" style="${style}"></span>`;
+    const c = e.carte;
+    const contenu = $('tarot-scans').checked
+      ? `<img src="images/tarot/${$('tarot-jeu').value}/${c.cle}.jpg" alt="" draggable="false">`
+      : `<b>${X.romain(c.numero)}</b>`;
+    return `<span class="tarot-face tarot-libre" data-i="${i}" style="${style}" title="${c.nom}">${contenu}</span>`;
+  }
+
+  function dessinerTable() {
+    $('tarot-table').innerHTML = tarot.etalees.map(carteTable).join('');
+  }
+
+  /** Retourne une carte de la table et la redessine à sa place (au-dessus des autres). */
+  function retournerCarte(i) {
+    tarot.etalees[i].visible = !tarot.etalees[i].visible;
+    $('tarot-table').querySelector(`[data-i="${i}"]`).outerHTML = carteTable(tarot.etalees[i], i);
+  }
+  /** Tout face visible ; si c'est déjà le cas, tout face cachée. */
+  function toutRetourner() {
+    const visible = !tarot.etalees.every((e) => e.visible);
+    tarot.etalees.forEach((e) => { e.visible = visible; });
+    dessinerTable();
+  }
+
+  /** Glisser-déposer avec les « pointer events » : marche à la souris ET au doigt. */
+  function brancherTable() {
+    const table = $('tarot-table');
+    let enCours = null; // { element, e, dx, dy } : la carte tenue et où on l'a saisie
+    table.addEventListener('pointerdown', (ev) => {
+      const el = ev.target.closest('.tarot-libre');
+      if (!el) return;
+      const boite = el.getBoundingClientRect();
+      // x0, y0 : point de départ, pour distinguer un simple toucher (retourner) d'un glissé.
+      enCours = { element: el, e: tarot.etalees[el.dataset.i], dx: ev.clientX - boite.left, dy: ev.clientY - boite.top,
+        x0: ev.clientX, y0: ev.clientY };
+      table.appendChild(el); // la carte saisie passe au-dessus des autres
+      el.setPointerCapture(ev.pointerId);
+      ev.preventDefault();
+    });
+    table.addEventListener('pointermove', (ev) => {
+      if (!enCours) return;
+      const t = table.getBoundingClientRect();
+      // Position en proportion de la table (0 à 1), bornée pour rester dedans.
+      const borne = (v, max) => Math.min(max, Math.max(0, v));
+      enCours.e.x = borne((ev.clientX - enCours.dx - t.left) / t.width, BORD_X);
+      enCours.e.y = borne((ev.clientY - enCours.dy - t.top) / t.height, BORD_Y);
+      enCours.element.style.left = enCours.e.x * 100 + '%';
+      enCours.element.style.top = enCours.e.y * 100 + '%';
+    });
+    // Lâcher : si la carte a bougé de moins de 5 px, c'était un toucher : on la retourne.
+    table.addEventListener('pointerup', (ev) => {
+      if (enCours && Math.hypot(ev.clientX - enCours.x0, ev.clientY - enCours.y0) < 5)
+        retournerCarte(Number(enCours.element.dataset.i));
+      enCours = null;
+    });
+    table.addEventListener('pointercancel', () => { enCours = null; });
+  }
+
+  function ramasserTable() {
+    tarot.paquet = X.ramasser(tarot.etalees);
+    noterGeste('étalement');
+    etalerTable();
+  }
+
+  // --- Mode « intention » : on mesure la durée de l'appui.
+  function debutAppui(ev) {
+    ev.preventDefault();
+    tarot.debutAppui = performance.now();
+    $('tarot-appui').classList.add('appuye');
+    tarot.minuterie = setInterval(() => {
+      $('tarot-duree').textContent = ((performance.now() - tarot.debutAppui) / 1000).toFixed(2) + ' s';
+    }, 50);
+  }
+
+  function finAppui() {
+    if (!tarot.debutAppui) return; // le doigt quitte le bouton sans l'avoir pressé
+    const duree = performance.now() - tarot.debutAppui;
+    tarot.debutAppui = 0;
+    clearInterval(tarot.minuterie);
+    $('tarot-appui').classList.remove('appuye');
+    tarot.paquet = X.parIntention(tarot.paquet, duree);
+    $('tarot-duree').textContent = `${(duree / 1000).toFixed(2)} s → paquet mélangé`;
+    noterGeste(`intention (${Math.round(duree)} ms)`);
+    etalerTable();
+  }
+
+  // --- Étape 2 : la coupe. Une fente cliquable entre deux cartes.
+  function dessinerCoupe() {
+    let fentes = '';
+    for (let i = 1; i < tarot.paquet.length; i++)
+      fentes += `<button type="button" class="tarot-fente" data-coupe="${i}" aria-label="Couper sous la carte ${i}"></button>`;
+    $('tarot-tranche').innerHTML = fentes;
+    montrerEtape('coupe');
+  }
+
+  function couperA(position) {
+    if (position) {
+      tarot.paquet = X.couper(tarot.paquet, position);
+      tarot.historique.push(`coupe à ${position}`);
+    }
+    // Les renversées sont décidées ici, une fois le paquet prêt (option).
+    if ($('tarot-renversees').checked) tarot.paquet = X.renverser(tarot.paquet);
+    tarot.tirees = [];
+    dessinerTirage();
+    montrerEtape('tirage');
+  }
+
+  // --- Étape 3 : l'éventail face cachée, puis la lecture.
+  function dessinerTirage() {
+    const positions = X.TIRAGES[$('tarot-tirage').value].positions;
+    // Si on passe à un tirage plus court en cours de route, on garde les premières cartes.
+    tarot.tirees = tarot.tirees.slice(0, positions.length);
+    const manque = positions.length - tarot.tirees.length;
+    $('tarot-reste').textContent = manque ? `(encore ${manque} carte${manque > 1 ? 's' : ''})` : '';
+    // L'éventail reste en place (grisé) une fois le tirage complet : sinon tout
+    // ce qui est dessous remonterait d'un coup.
+    $('tarot-eventail').classList.toggle('epuise', !manque);
+    $('tarot-eventail').innerHTML = tarot.paquet.map((_, i) =>
+      `<button type="button" class="tarot-dos" data-tirer="${i}" aria-label="Carte ${i + 1}"${manque ? '' : ' disabled'}></button>`).join('');
+    // visibility (et non hidden) : le bouton garde sa place, rien ne bouge quand il apparaît.
+    $('tarot-recommencer').style.visibility = manque ? 'hidden' : 'visible';
+    $('tarot-credit').textContent = $('tarot-scans').checked ? TT.jeux[$('tarot-jeu').value].scans : '';
+    // Une case par position dès le départ : les emplacements vides se remplissent
+    // au fur et à mesure, au lieu que la grille grandisse à chaque carte.
+    $('tarot-resultat').innerHTML = positions.map((position, i) => {
+      const carte = tarot.tirees[i];
+      if (!carte) return `<div class="tarot-position">
+        <p class="label">${position}</p>
+        <div class="tarot-carte tarot-vide" aria-label="Carte à tirer">?</div>
+      </div>`;
+      const t = textesCarte[carte.cle];
+      const sens = carte.renversee ? `<em>Renversée :</em> ${t.renverse}` : t.phrase;
+      return `<div class="tarot-position">
+        <p class="label">${position}</p>
+        ${faceTarot(carte)}
+        <p>${sens}</p>
+      </div>`;
+    }).join('');
+  }
+
+  function tirerCarte(indice) {
+    const { carte, reste } = X.tirer(tarot.paquet, indice);
+    tarot.paquet = reste;
+    tarot.tirees.push(carte);
+    dessinerTirage();
+  }
+
+  /** Note sous les réglages : particularités du jeu. (Le crédit des images est
+   *  sous le résultat, pour que cocher l'option ne change pas la hauteur ici.) */
+  function noteJeu() {
+    $('tarot-note-jeu').textContent = TT.jeux[$('tarot-jeu').value].note;
+  }
+
+  function initTarot() {
+    $('tarot-jeu').innerHTML = Object.entries(TT.jeux)
+      .map(([cle, j]) => `<option value="${cle}">${j.nom}</option>`).join('');
+    $('tarot-jeu').value = memoire.lire('toiles_tarot_jeu', 'marseille');
+    $('tarot-tirage').innerHTML = Object.entries(X.TIRAGES)
+      .map(([cle, t]) => `<option value="${cle}">${t.nom}</option>`).join('');
+    $('tarot-tirage').value = memoire.lire('toiles_tarot_tirage', 'trois');
+    const aide = TT.infobulle;
+    $('tarot-aide').innerHTML = `<p><strong>Principe.</strong> ${aide.principe}</p>
+      <p><strong>Base.</strong> ${aide.base}</p><p><strong>Limites.</strong> ${aide.limites}</p>`;
+
+    $('ouvrir-tarot').addEventListener('click', () => { nouveauTirage(); $('panneau-tarot').showModal(); });
+    $('fermer-tarot').addEventListener('click', () => $('panneau-tarot').close());
+    $('panneau-tarot').addEventListener('click', (e) => { if (e.target === $('panneau-tarot')) $('panneau-tarot').close(); });
+    $('tarot-jeu').addEventListener('change', () => { memoire.ecrire('toiles_tarot_jeu', $('tarot-jeu').value); nouveauTirage(); });
+    // Images d'époque : mémorisé ; on redessine le tirage en cours sans le perdre.
+    $('tarot-scans').checked = memoire.lire('toiles_tarot_scans', '') === 'oui';
+    $('tarot-scans').addEventListener('change', () => {
+      memoire.ecrire('toiles_tarot_scans', $('tarot-scans').checked ? 'oui' : '');
+      noteJeu();
+      if (!$('tarot-etape-tirage').hidden) dessinerTirage();
+    });
+    $('tarot-tirage').addEventListener('change', () => {
+      memoire.ecrire('toiles_tarot_tirage', $('tarot-tirage').value);
+      if (!$('tarot-etape-tirage').hidden) dessinerTirage();
+    });
+
+    // Onglets des quatre façons de mélanger (on peut les enchaîner).
+    $('tarot-onglets').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-mode]');
+      if (!b) return;
+      document.querySelectorAll('#tarot-onglets .onglet').forEach((o) => {
+        o.classList.toggle('actif', o === b);
+        o.setAttribute('aria-selected', o === b);
+      });
+      document.querySelectorAll('.tarot-mode').forEach((m) => { m.hidden = m.dataset.mode !== b.dataset.mode; });
+    });
+
+    $('tarot-riffle').addEventListener('click', brasser);
+    brancherTable();
+    $('tarot-etaler').addEventListener('click', etalerTable);
+    $('tarot-retourner').addEventListener('click', toutRetourner);
+    $('tarot-ramasser').addEventListener('click', ramasserTable);
+    $('tarot-appui').addEventListener('pointerdown', debutAppui);
+    for (const fin of ['pointerup', 'pointerleave', 'pointercancel']) $('tarot-appui').addEventListener(fin, finAppui);
+    $('tarot-auto').addEventListener('click', () => {
+      tarot.paquet = X.melanger(tarot.paquet);
+      noterGeste('automatique');
+      etalerTable();
+    });
+
+    $('tarot-vers-coupe').addEventListener('click', dessinerCoupe);
+    $('tarot-tranche').addEventListener('click', (e) => {
+      const f = e.target.closest('[data-coupe]');
+      if (f) couperA(Number(f.dataset.coupe));
+    });
+    $('tarot-sans-coupe').addEventListener('click', () => couperA(0));
+    $('tarot-eventail').addEventListener('click', (e) => {
+      const c = e.target.closest('[data-tirer]');
+      if (c) tirerCarte(Number(c.dataset.tirer));
+    });
+    $('tarot-recommencer').addEventListener('click', nouveauTirage);
+  }
+
   // ===================== 5. Démarrage =====================
 
   $('domaine').innerHTML = N.DOMAINES
@@ -1294,6 +1624,7 @@
   initCalendrier();
   initJournal();
   initQuiz();
+  initTarot();
   // Choix de l'ayanamsa (comparaison sidérale), mémorisé comme le filtre.
   $('ayanamsa').innerHTML = Object.entries(CP.AYANAMSAS)
     .map(([cle, a]) => `<option value="${cle}">${a.nom}</option>`).join('');

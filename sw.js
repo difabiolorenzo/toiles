@@ -19,7 +19,7 @@
  *   navigateurs à recharger les fichiers au lieu de garder l'ancienne copie.
  */
 
-const VERSION = 'toiles-v1';
+const VERSION = 'toiles-v4'; // v4 : étalement en arc, cartes retournables, filtre Synthèse
 
 // Tous les fichiers nécessaires à l'application (chemins relatifs au dossier du site).
 const FICHIERS = [
@@ -45,6 +45,8 @@ const FICHIERS = [
   'src/calendrier.js',
   'src/journal.js',
   'src/quiz.js',
+  'src/textes-tarot.js',
+  'src/tarot.js',
   'src/app.js',
   'images/logo.svg',
   'images/icones/icone-180.png',

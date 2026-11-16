@@ -350,6 +350,30 @@
       `jours avec changement de signe lunaire en avril 2024 : ${joursAvecChangement} (attendu 11 à 15)`);
   });
 
+  test('Astres', 'Prochaines phases principales (dates publiées, mars 2025)', () => {
+    // Dates de référence (TU) : premier quartier 6/03 16h31, pleine lune 14/03 6h55,
+    // dernier quartier 22/03 11h29, nouvelle lune 29/03 10h58.
+    const attendu = { 'Premier quartier': '2025-03-06T16:31Z', 'Pleine lune': '2025-03-14T06:55Z',
+      'Dernier quartier': '2025-03-22T11:29Z', 'Nouvelle lune': '2025-03-29T10:58Z' };
+    const phases = T.astres.prochainesPhases(new Date('2025-03-01T00:00Z'));
+    egal(phases.map((p) => p.nom).join(', '), 'Premier quartier, Pleine lune, Dernier quartier, Nouvelle lune', 'ordre :');
+    for (const p of phases) {
+      const ecartMin = Math.abs(p.date - new Date(attendu[p.nom])) / 60000;
+      vrai(ecartMin < 30, `${p.nom} : écart ${ecartMin.toFixed(0)} min (attendu < 30)`);
+    }
+  });
+  test('Transits', 'Avertissement quand le Soleil change de signe le jour de naissance', () => {
+    const A = T.astres;
+    // Équinoxe de mars 2025 : 20 mars à 9 h 01 TU → le Soleil passe des Poissons au Bélier ce jour-là.
+    const equinoxe = A.themeNatal('2025-03-20');
+    vrai(equinoxe.soleilChangeDeSigne, 'le 20/03/2025, le Soleil change de signe');
+    vrai(equinoxe.avertissementSoleil !== null, 'message affiché le 20/03/2025');
+    // Le lendemain, il est installé en Bélier : pas d'avertissement.
+    const lendemain = A.themeNatal('2025-03-21');
+    egal(lendemain.soleilChangeDeSigne, false, 'le 21/03/2025 :');
+    egal(lendemain.avertissementSoleil, null, 'pas de message le 21/03/2025 :');
+  });
+
   /** Fabrique une position factice (comme celles de positions()) pour tester les transits. */
   function positionFactice(cle, lon) {
     return { cle, ...T.astres.ASTRES[cle], lon, retrograde: false, signe: T.astres.signe(lon) };
@@ -998,6 +1022,101 @@
       vrai(I[cle] && I[cle].principe && I[cle].base && I[cle].limites, `infobulle « ${cle} » incomplète`);
       vrai(M.trouver(I[cle].sectionMethodologie), `infobulle « ${cle} » : section « ${I[cle].sectionMethodologie} » introuvable`);
     }
+  });
+
+  // =====================================================================
+  //  TAROT
+  // =====================================================================
+
+  /** Vrai si deux paquets contiennent exactement les mêmes cartes (ordre ignoré). */
+  function memesCartes(a, b) {
+    const cles = (p) => p.map((c) => c.cle).sort().join(',');
+    return a.length === b.length && cles(a) === cles(b);
+  }
+
+  test('Tarot', '22 arcanes complets, dans les deux jeux', () => {
+    const X = T.tarot, M = T.textesTarot.majeurs;
+    egal(M.length, 22, 'nombre d’arcanes :');
+    for (const c of M) vrai(c.motCle && c.phrase && c.renverse && c.nom.marseille && c.nom.rws, `${c.cle} : texte manquant`);
+    for (const jeu of ['marseille', 'rws']) {
+      const p = X.paquetDe(jeu);
+      egal(p.map((c) => c.numero).join(','), Array.from({ length: 22 }, (_, i) => i).join(','), `${jeu} : numéros 0 à 21 :`);
+    }
+  });
+
+  test('Tarot', 'Force et Justice échangées entre Marseille et Rider-Waite', () => {
+    const X = T.tarot;
+    egal(X.paquetDe('marseille')[8].cle, 'justice', 'Marseille VIII :');
+    egal(X.paquetDe('marseille')[11].cle, 'force', 'Marseille XI :');
+    egal(X.paquetDe('rws')[8].cle, 'force', 'RWS VIII :');
+    egal(X.paquetDe('rws')[11].cle, 'justice', 'RWS XI :');
+    egal(X.romain(14), 'XIV', '14 →'); egal(X.romain(19), 'XIX', '19 →'); egal(X.romain(21), 'XXI', '21 →');
+  });
+
+  test('Tarot', 'Les quatre mélanges ne perdent ni ne doublent aucune carte', () => {
+    const X = T.tarot, p = X.paquetDe('marseille'), h = X.hasardAGraine(42);
+    let r = p;
+    for (let i = 0; i < 50; i++) { r = X.riffle(r, h); vrai(memesCartes(r, p), `riffle n° ${i + 1}`); }
+    vrai(memesCartes(X.melanger(p, h), p), 'Fisher-Yates');
+    vrai(memesCartes(X.parIntention(p, 1234), p), 'par intention');
+    vrai(memesCartes(X.ramasser(X.etaler(p, h)), p), 'étalement');
+    const arc = X.etalerEnArc(p, h);
+    vrai(memesCartes(X.ramasser(arc), p), 'étalement en arc');
+    vrai(arc.every((e) => e.x >= 0 && e.x <= 1 && e.y >= 0 && e.y <= 1), 'arc : positions dans la table');
+    vrai(arc[0].x < arc[arc.length - 1].x && arc[Math.floor(arc.length / 2)].y < arc[0].y, 'arc : de gauche à droite, sommet en haut');
+    vrai(memesCartes(X.couper(p, 9), p), 'coupe');
+  });
+
+  test('Tarot', 'Riffle : les deux moitiés gardent leur ordre interne', () => {
+    // Propriété du mélange à l'américaine : chaque moitié se retrouve entremêlée
+    // à l'autre, mais l'ordre des cartes d'une même moitié ne change pas.
+    const X = T.tarot, p = X.paquetDe('rws'), h = X.hasardAGraine(7);
+    const r = X.riffle(p, h).map((c) => c.numero);
+    const croissant = (l) => l.every((n, i) => i === 0 || n > l[i - 1]);
+    // Il doit exister un point de coupe k tel que les cartes < k et ≥ k restent chacune en ordre.
+    const ok = Array.from({ length: 23 }, (_, k) => k)
+      .some((k) => croissant(r.filter((n) => n < k)) && croissant(r.filter((n) => n >= k)));
+    vrai(ok, `ordre obtenu : ${r.join(',')}`);
+  });
+
+  test('Tarot', 'Intention : même durée → même ordre, durée différente → autre ordre', () => {
+    const X = T.tarot, p = X.paquetDe('marseille');
+    const ordre = (ms) => X.parIntention(p, ms).map((c) => c.cle).join();
+    egal(ordre(1500), ordre(1500), 'reproductible :');
+    vrai(ordre(1500) !== ordre(1501), 'une milliseconde change le mélange');
+  });
+
+  test('Tarot', 'Étalement ramassé en lisant la table (haut → bas, gauche → droite)', () => {
+    const X = T.tarot;
+    const etalees = [
+      { carte: { cle: 'c' }, x: 0.1, y: 0.9 },
+      { carte: { cle: 'b' }, x: 0.8, y: 0.05 },
+      { carte: { cle: 'a' }, x: 0.2, y: 0.08 },
+    ];
+    egal(X.ramasser(etalees).map((c) => c.cle).join(''), 'abc', 'ordre ramassé :');
+  });
+
+  test('Tarot', 'Images d’époque : un crédit par jeu, un scan par arcane', () => {
+    const TT = T.textesTarot;
+    for (const [cle, jeu] of Object.entries(TT.jeux)) {
+      vrai(/domaine public/.test(jeu.scans), `crédit des images du jeu ${cle}`);
+      // Présence des fichiers : vérifiable seulement sous Node (pas de fs dans le navigateur).
+      if (typeof require === 'function') {
+        const fs = require('fs'), path = require('path');
+        for (const c of TT.majeurs)
+          vrai(fs.existsSync(path.join(__dirname, '..', 'images', 'tarot', cle, c.cle + '.jpg')), `scan ${cle}/${c.cle}.jpg`);
+      }
+    }
+  });
+
+  test('Tarot', 'Coupe et tirage', () => {
+    const X = T.tarot, p = [1, 2, 3, 4, 5].map((n) => ({ cle: n }));
+    egal(X.couper(p, 2).map((c) => c.cle).join(''), '34512', 'coupe à 2 :');
+    egal(X.couper(p, 0).map((c) => c.cle).join(''), '12345', 'coupe à 0 :');
+    const { carte, reste } = X.tirer(p, 1);
+    egal(carte.cle, 2, 'carte tirée :'); egal(reste.length, 4, 'reste :');
+    egal(p.length, 5, 'le paquet d’origine est intact :');
+    egal(X.TIRAGES.croix.positions.length, 5, 'croix :');
   });
 
   T.tests = { liste: tests };

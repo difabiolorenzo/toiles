@@ -42,6 +42,7 @@
       <button type="button" class="lien" id="ouvrir-methodologie">Méthodologie &amp; Pédagogie</button>
       <button type="button" class="lien" id="ouvrir-fiches">Fiches glossaire</button>
       <button type="button" class="lien" id="ouvrir-quiz">Quiz</button>
+      <button type="button" class="lien" id="ouvrir-tarot">Tarot</button>
     </div>
   </header>
 
@@ -60,6 +61,7 @@
     <fieldset class="filtre" id="filtre">
       <legend>Afficher</legend>
       <label><input type="radio" name="vue" value="tout" checked> Tout</label>
+      <label><input type="radio" name="vue" value="synthese"> Synthèse</label>
       <label><input type="radio" name="vue" value="numerologie"> Numérologie</label>
       <label><input type="radio" name="vue" value="ciel"> Ciel</label>
       <label><input type="radio" name="vue" value="transits"> Transits</label>
@@ -103,6 +105,7 @@
     <section class="carte" data-module="ciel">
       <h2>Ciel du moment <button type="button" class="info" data-info="ciel" aria-label="Comment ça marche ?">?</button></h2>
       <div id="lune" class="lune"></div>
+      <div id="prochaines-phases"></div>
       <table class="astres" id="astres"></table>
       <!-- Pluton, Chiron, nœuds : affichés à part, sans voter (src/complements.js). -->
       <h3>Points complémentaires <button type="button" class="info" data-info="complements" aria-label="Comment ça marche ?">?</button></h3>
@@ -224,6 +227,88 @@
     <div id="quiz-question"></div>
   </dialog>
 
+  <!-- Tirage de tarot (v0.8) : mélanger soi-même, couper, choisir ses cartes.
+       Calcul dans src/tarot.js, textes dans src/textes-tarot.js, affichage dans src/app.js. -->
+  <dialog class="panneau panneau-large" id="panneau-tarot" aria-labelledby="titre-tarot">
+    <div class="panneau-entete">
+      <h2 id="titre-tarot">Tarot</h2>
+      <button type="button" class="fermer" id="fermer-tarot" aria-label="Fermer">×</button>
+    </div>
+    <div class="tarot-reglages">
+      <label class="choix-carte">Jeu <select id="tarot-jeu"></select></label>
+      <label class="choix-carte">Tirage <select id="tarot-tirage"></select></label>
+      <label class="tarot-case"><input type="checkbox" id="tarot-renversees"> Cartes renversées</label>
+      <label class="tarot-case"><input type="checkbox" id="tarot-scans"> Images d’époque</label>
+    </div>
+    <p class="caption" id="tarot-note-jeu"></p>
+    <details class="tarot-aide">
+      <summary>Comment ça marche ?</summary>
+      <div id="tarot-aide"></div>
+    </details>
+
+    <!-- Étape 1 : mélanger, de quatre façons qu'on peut enchaîner. -->
+    <section class="tarot-etape" id="tarot-etape-melange">
+      <h3>1 · Mélanger</h3>
+      <div class="panneau-onglets" id="tarot-onglets" role="tablist">
+        <button type="button" class="onglet actif" data-mode="main" role="tab" aria-selected="true">À la main</button>
+        <button type="button" class="onglet" data-mode="etalement" role="tab" aria-selected="false">Étalement</button>
+        <button type="button" class="onglet" data-mode="intention" role="tab" aria-selected="false">Intention</button>
+        <button type="button" class="onglet" data-mode="auto" role="tab" aria-selected="false">Automatique</button>
+      </div>
+      <!-- Les quatre modes sont superposés dans la même case : le bloc garde la hauteur
+           du plus grand, donc changer d'onglet ne fait pas sauter la page. -->
+      <div class="tarot-modes">
+      <div class="tarot-mode" data-mode="main">
+        <p>Chaque clic coupe le paquet en deux et entremêle les moitiés, comme avec les mains.</p>
+        <div class="tarot-ligne">
+          <div class="tarot-pile" id="tarot-pile" aria-hidden="true"></div>
+          <button type="button" class="principal" id="tarot-riffle">Brasser</button>
+          <span class="label" id="tarot-compteur" role="status"></span>
+        </div>
+      </div>
+      <div class="tarot-mode" data-mode="etalement" hidden>
+        <p>Fais glisser les cartes pour les mêler, puis ramasse-les : elles sont reprises de haut en bas, de gauche à droite. Touche une carte sans la déplacer pour la retourner.</p>
+        <div class="tarot-table" id="tarot-table"></div>
+        <div class="tarot-ligne">
+          <button type="button" class="lien" id="tarot-etaler">Étaler à nouveau</button>
+          <button type="button" class="lien" id="tarot-retourner">Tout retourner</button>
+          <button type="button" class="principal" id="tarot-ramasser">Ramasser</button>
+        </div>
+      </div>
+      <div class="tarot-mode" data-mode="intention" hidden>
+        <p>Pense à ta question et garde le doigt appuyé aussi longtemps que tu veux. La durée de l’appui fixe le mélange.</p>
+        <div class="tarot-ligne">
+          <button type="button" class="tarot-appui" id="tarot-appui">Maintenir appuyé</button>
+          <span class="label" id="tarot-duree" role="status"></span>
+        </div>
+      </div>
+      <div class="tarot-mode" data-mode="auto" hidden>
+        <p>L’ordinateur mélange d’un coup (tous les ordres ont la même chance).</p>
+        <button type="button" class="principal" id="tarot-auto">Mélanger</button>
+      </div>
+      </div>
+      <p class="caption" id="tarot-historique"></p>
+      <button type="button" class="principal" id="tarot-vers-coupe">Passer à la coupe →</button>
+    </section>
+
+    <!-- Étape 2 : couper là où on clique. -->
+    <section class="tarot-etape" id="tarot-etape-coupe" hidden>
+      <h3>2 · Couper</h3>
+      <p>Clique sur la tranche du paquet là où tu veux couper : le dessus passe dessous.</p>
+      <div class="tarot-tranche" id="tarot-tranche"></div>
+      <button type="button" class="lien" id="tarot-sans-coupe">Ne pas couper</button>
+    </section>
+
+    <!-- Étape 3 : choisir ses cartes dans l'éventail, puis lire. -->
+    <section class="tarot-etape" id="tarot-etape-tirage" hidden>
+      <h3>3 · Choisir <span id="tarot-reste"></span></h3>
+      <div class="tarot-eventail" id="tarot-eventail"></div>
+      <div class="tarot-resultat" id="tarot-resultat"></div>
+      <p class="caption" id="tarot-credit"></p>
+      <button type="button" class="principal" id="tarot-recommencer">Nouveau tirage</button>
+    </section>
+  </dialog>
+
   <!-- Panneau Méthodologie & Pédagogie. <dialog> est natif : zéro dépendance. -->
   <dialog class="panneau panneau-large" id="panneau-methodologie" aria-labelledby="titre-methodologie">
     <div class="panneau-entete">
@@ -276,6 +361,8 @@
   <script src="src/calendrier.js"></script>
   <script src="src/journal.js"></script>
   <script src="src/quiz.js"></script>
+  <script src="src/textes-tarot.js"></script>
+  <script src="src/tarot.js"></script>
   <script src="src/app.js"></script>
   <script>
     // Service worker (sw.js) : rend Toiles installable et disponible hors ligne.

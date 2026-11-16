@@ -123,7 +123,9 @@
    *    ou les séries VSOP87) reposent sur des tables de milliers de termes de plusieurs mégaoctets.
    *    Pour que Toiles s'exécute sans aucune dépendance, instantanément et par simple double-clic
    *    sur index.html (file://), Paul Schlyter a calibré des équations polynomiales compactes
-   *    des éléments orbitaux à l'époque J2000.0 (31 décembre 1999 à 0h TU, jour julien 2451543.5).
+   *    des éléments orbitaux moyens, comptés depuis sa propre époque : le 31 décembre 1999 à 0h TU
+   *    (jour julien 2451543.5). Attention : ce n'est PAS l'époque standard J2000.0 des astronomes,
+   *    qui est le 1er janvier 2000 à 12h TT (jour julien 2451545.0), 1,5 jour plus tard.
    *
    * 2. Soleil :
    *    En astrologie géocentrique, le mouvement apparent du Soleil vu de la Terre est l'exact reflet
@@ -257,6 +259,50 @@
       nom: PHASES[Math.floor(norm(elong + 22.5) / 45) % 8],
       croissante: elong < 180,
     };
+  }
+
+  // ---------- Prochaines phases principales ----------
+  /**
+   * Les 4 phases principales sont des instants précis, définis par l'élongation
+   * (écart en longitude Lune − Soleil) : nouvelle lune 0°, premier quartier 90°,
+   * pleine lune 180°, dernier quartier 270°.
+   */
+  const PHASES_PRINCIPALES = [
+    { nom: 'Nouvelle lune', angle: 0 },
+    { nom: 'Premier quartier', angle: 90 },
+    { nom: 'Pleine lune', angle: 180 },
+    { nom: 'Dernier quartier', angle: 270 },
+  ];
+
+  /** Élongation de la Lune (0–360°) au jour Schlyter d. */
+  const elongation = (d) => norm(longitude('lune', d) - longitude('soleil', d));
+
+  /**
+   * Instant (Date) où l'élongation atteint « angle » pour la première fois après « date ».
+   *
+   * Comment : l'élongation augmente toujours (≈ 12,2° par jour), sans jamais reculer.
+   * On mesure donc le chemin qui reste à parcourir jusqu'à l'angle visé (0 à 360°),
+   * puis on avance par pas de 6 h jusqu'à le franchir, et on resserre par dichotomie
+   * (on coupe l'intervalle en deux 30 fois → précision bien inférieure à la minute).
+   */
+  function prochaineElongation(date, angle) {
+    const depart = jourSchlyter(date);
+    const reste = (d) => norm(angle - elongation(d));   // degrés restant à parcourir
+    let avant = depart, apres = depart + 0.25;
+    // franchi quand le « reste » saute de petit (proche de 0) à grand (proche de 360)
+    while (reste(apres) <= reste(avant)) { avant = apres; apres += 0.25; }
+    for (let k = 0; k < 30; k++) {
+      const milieu = (avant + apres) / 2;
+      if (reste(milieu) <= reste(avant)) avant = milieu; else apres = milieu;
+    }
+    return new Date((apres + 2451543.5 - 2440587.5) * 86400000);
+  }
+
+  /** Les 4 prochaines phases principales après « date », triées dans le temps. */
+  function prochainesPhases(date) {
+    return PHASES_PRINCIPALES
+      .map((p) => ({ nom: p.nom, angle: p.angle, date: prochaineElongation(date, p.angle) }))
+      .sort((a, b) => a.date - b.date);
   }
 
   // ---------- Aspects ----------
@@ -426,8 +472,12 @@
    * les positions planétaires à 12h00 Temps Universel (midi TU) est la convention
    * astronomique standard : elle minimise l'incertitude temporelle sur la journée à ±12 heures.
    * Pour le Soleil et les planètes (Mercure à Neptune), le déplacement angulaire en 12 heures
-   * est très faible (< 0,5° pour les planètes rapides, quasi nul pour les lentes),
-   * ce qui garantit la fiabilité du signe zodiacal et des aspects.
+   * reste faible : jusqu'à ~1° pour Mercure (la plus rapide), ~0,6° pour Vénus, quasi nul
+   * pour les lentes. Le signe n'est en doute que si l'astre est tout près d'une frontière ;
+   * on surveille donc aussi le Soleil, qui change de signe vers le 20 de chaque mois.
+   *
+   * Limite : la « journée » surveillée va de 0h à 24h TU, pas de 0h à 24h heure locale
+   * (en France, une naissance à 0h30 tombe la veille en TU).
    *
    * Pourquoi surveiller le changement de signe de la Lune ?
    * La Lune est le corps céleste le plus rapide : elle parcourt environ 13° par jour
@@ -468,6 +518,14 @@
     const s24 = signe(longitude('lune', d24));
     const luneChangeDeSigne = s0.index !== s24.index;
 
+    // Même contrôle pour le Soleil (jour de changement de signe, vers le 20 du mois).
+    const sol0 = signe(longitude('soleil', d0));
+    const sol24 = signe(longitude('soleil', d24));
+    const soleilChangeDeSigne = sol0.index !== sol24.index;
+    const avertissementSoleil = soleilChangeDeSigne
+      ? `Le Soleil a changé de signe ce jour-là (du ${sol0.nom} au ${sol24.nom}). Sans heure précise de naissance, ton signe solaire reste incertain.`
+      : null;
+
     let avertissementLune = null;
     if (luneChangeDeSigne) {
       avertissementLune = `La Lune a changé de signe ce jour-là (du ${s0.nom} au ${s24.nom}). Sans heure précise de naissance, son signe natal reste incertain.`;
@@ -482,6 +540,8 @@
       aspects: aspects(pos),
       luneChangeDeSigne,
       avertissementLune,
+      soleilChangeDeSigne,
+      avertissementSoleil,
       signeLuneDebut: s0,
       signeLuneFin: s24,
     };
@@ -490,7 +550,7 @@
   T.astres = {
     expliquerPosition, expliquerAspect,
     jourJulien, longitude: (nom, date) => longitude(nom, jourSchlyter(date)),
-    signe, positions, phaseLunaire, aspects, dynamique,
+    signe, positions, phaseLunaire, prochainesPhases, aspects, dynamique,
     teinteDuJour, positionsHeliocentriques, PLANETES_HELIO,
     themeNatal,
     SIGNES, ASTRES, ASPECTS, PHASES,

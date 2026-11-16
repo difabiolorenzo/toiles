@@ -149,6 +149,17 @@ button, input, select, textarea { font-family: inherit; }
   font: inherit; font-size: 1rem; padding: .45rem .6rem; border: 1px solid var(--ink-muted);
   border-radius: var(--radius-sm); background: var(--surface); color: var(--ink);
 }
+/* Alignement : les champs Date / Profil / Domaine (et Naissance) partagent la même
+   ligne de base (bas des champs), la même hauteur et la même largeur, quel que soit
+   le navigateur (le champ date est naturellement plus haut qu'un menu déroulant). */
+.controles { align-items: flex-end; }
+.controles > label > input, .controles > label > select, .profil-choix select {
+  box-sizing: border-box; height: 2.75rem; width: 9.5rem; line-height: normal;
+}
+.profil-choix .lien { height: 2.75rem; padding-block: 0; }
+/* Le filtre « Afficher » passe sur sa propre ligne, centrée sous les champs. */
+.controles .filtre { flex-basis: 100%; justify-content: center; }
+.controles .filtre legend { margin-inline: auto; }
 
 .grille { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: var(--space-5); padding: 0 var(--space-4) var(--space-7); max-width: 1200px; margin: 0 auto; }
 .carte { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); padding: var(--space-5); }
@@ -505,3 +516,94 @@ button, input, select, textarea { font-family: inherit; }
 .quiz-reponse.fausse::after { content: " ✗ ta réponse"; color: var(--tension); font-weight: 500; }
 #quiz-retour p { margin: var(--space-3) 0 0; }
 #quiz-retour .liens-fiche { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; }
+
+/* =====================================================================
+   v0.8 — Tarot : mélanges, coupe, tirage
+   ===================================================================== */
+.tarot-reglages { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: flex-end; margin-top: var(--space-3); }
+.tarot-case { display: flex; gap: var(--space-2); align-items: center; font-size: 15px; color: var(--ink-muted); }
+.tarot-aide summary { cursor: pointer; color: var(--glyph); font-size: 15px; }
+.tarot-aide p { font-size: 15px; line-height: 22px; }
+.tarot-etape p { margin: var(--space-2) 0; }
+.tarot-ligne { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; margin: var(--space-3) 0; }
+#tarot-vers-coupe { margin-top: var(--space-2); }
+.tarot-etape [hidden] { display: none; }
+
+/* Hauteur fixe du panneau tarot : il ne change pas de taille d'une étape à l'autre ;
+   si le contenu dépasse (grand tirage), c'est l'intérieur qui défile. */
+#panneau-tarot { height: min(880px, calc(100dvh - 40px)); }
+
+/* Modes de mélange superposés (même case de grille) : le bloc prend la hauteur du
+   plus grand. Les modes inactifs restent dans la mise en page mais invisibles. */
+.tarot-modes { display: grid; }
+/* Textes qui changent après chaque geste : place réservée (2 lignes) pour qu'ils
+   ne poussent pas les boutons en passant d'une à deux lignes. */
+#tarot-historique { min-height: 44px; }
+#tarot-compteur, #tarot-duree { min-width: 12em; }
+.tarot-modes > .tarot-mode { grid-area: 1 / 1; }
+.tarot-modes > .tarot-mode[hidden] { display: block; visibility: hidden; }
+
+/* Éventail épuisé : grisé, plus cliquable, mais toujours là. */
+.tarot-eventail.epuise .tarot-dos.tarot-dos { opacity: .3; cursor: default; transform: none; }
+
+/* Emplacement encore vide dans le résultat. */
+.tarot-vide { border-style: dashed; color: var(--line); font-size: 28px; justify-content: center; }
+
+/* Dos de carte : rectangle aux proportions d'une carte (≈ 3 : 5), motif discret. */
+.tarot-dos { display: inline-block; width: 36px; height: 60px; border-radius: 4px; border: 1px solid var(--line);
+  background: repeating-linear-gradient(45deg, var(--track) 0 4px, var(--surface) 4px 8px); }
+
+/* Pile « à la main » : cinq dos empilés et légèrement décalés. */
+.tarot-pile { position: relative; width: 52px; height: 66px; }
+.tarot-pile .tarot-dos { position: absolute; }
+.tarot-pile .tarot-dos:nth-child(2) { left: 3px; top: 1px; }
+.tarot-pile .tarot-dos:nth-child(3) { left: 6px; top: 2px; }
+.tarot-pile .tarot-dos:nth-child(4) { left: 9px; top: 3px; }
+.tarot-pile .tarot-dos:nth-child(5) { left: 12px; top: 4px; }
+.tarot-pile.secoue .tarot-dos:nth-child(odd) { animation: tarot-gauche .35s ease; }
+.tarot-pile.secoue .tarot-dos:nth-child(even) { animation: tarot-droite .35s ease; }
+@keyframes tarot-gauche { 50% { transform: translateX(-14px) rotate(-6deg); } }
+@keyframes tarot-droite { 50% { transform: translateX(14px) rotate(6deg); } }
+
+/* Table d'étalement : cartes en position absolue (en %). touch-action: none
+   empêche le téléphone de faire défiler la page pendant qu'on glisse une carte. */
+.tarot-table { position: relative; height: 260px; border: 1px dashed var(--line); border-radius: var(--radius-sm);
+  background: var(--bg); touch-action: none; overflow: hidden; }
+.tarot-libre { position: absolute; cursor: grab; touch-action: none; }
+/* Carte retournée sur la table : même taille que le dos, face visible. */
+.tarot-face { display: flex; align-items: center; justify-content: center; width: 36px; height: 60px; box-sizing: border-box;
+  border: 1px solid var(--glyph); border-radius: 4px; background: var(--bg); color: var(--glyph); font-size: 13px; overflow: hidden; user-select: none; }
+.tarot-face img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+.tarot-libre:active { cursor: grabbing; }
+
+/* Intention : un gros bouton qui s'allume pendant l'appui. */
+.tarot-appui { font: inherit; padding: var(--space-4) var(--space-5); border-radius: var(--radius-pill); border: 2px solid var(--glyph);
+  background: var(--surface); color: var(--glyph); cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: none; }
+.tarot-appui.appuye { background: var(--pastille); color: var(--sur-pastille); }
+
+/* Coupe : la tranche du paquet, une fente cliquable entre chaque carte. */
+.tarot-tranche { display: flex; height: 60px; border: 1px solid var(--line); border-radius: 4px; overflow: hidden;
+  background: repeating-linear-gradient(90deg, var(--track) 0 2px, var(--surface) 2px 4px); margin: var(--space-3) 0; }
+.tarot-fente { flex: 1; border: 0; background: none; cursor: pointer; padding: 0; }
+.tarot-fente:hover, .tarot-fente:focus-visible { background: var(--pastille); }
+
+/* Éventail : les cartes se chevauchent, celle survolée se soulève. */
+.tarot-eventail { display: flex; flex-wrap: wrap; padding: var(--space-4) 0 var(--space-3) 20px; }
+.tarot-eventail .tarot-dos { margin-left: -20px; cursor: pointer; padding: 0; transition: transform .15s; }
+.tarot-eventail .tarot-dos:hover, .tarot-eventail .tarot-dos:focus-visible { transform: translateY(-10px); }
+
+/* Résultat : une colonne par position. */
+.tarot-resultat { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--space-4); margin: var(--space-3) 0; }
+.tarot-position p { margin: var(--space-2) 0; font-size: 15px; line-height: 22px; }
+.tarot-carte { display: flex; flex-direction: column; align-items: center; justify-content: space-between; text-align: center;
+  aspect-ratio: 3 / 5; max-width: 140px; box-sizing: border-box; padding: var(--space-3) var(--space-2);
+  border: 1px solid var(--glyph); border-radius: var(--radius-sm); background: var(--bg); }
+.tarot-carte strong { font-weight: 500; font-size: 17px; line-height: 22px; }
+.tarot-num { color: var(--glyph); font-size: 15px; letter-spacing: .08em; }
+.tarot-mot { font-size: 15px; color: var(--ink-muted); font-style: italic; }
+/* Option « Images d'époque » : le scan, retourné si la carte sort renversée. */
+.tarot-scan { margin: 0; max-width: 140px; text-align: center; font-size: 15px; line-height: 20px; }
+.tarot-scan img { display: block; width: 100%; aspect-ratio: 3 / 5; object-fit: contain; border-radius: var(--radius-sm); }
+.tarot-scan.renversee img { transform: rotate(180deg); }
+.tarot-scan figcaption { margin-top: var(--space-2); display: flex; flex-direction: column; }
+.tarot-carte.renversee .tarot-num::after { content: " ↓ renversée"; letter-spacing: 0; }
